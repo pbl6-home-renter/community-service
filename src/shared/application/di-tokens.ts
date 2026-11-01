@@ -1,0 +1,9 @@
+export const UNIT_OF_WORK_DI_TOKEN = Symbol('UNIT_OF_WORK');
+
+export const MESSAGE_BROKER_DI_TOKEN = {
+  PUBLISHER: Symbol('MESSAGE_BROKER_PUBLISHER'),
+};
+
+export const INTERNAL_HTTP_DI_TOKEN = {
+  CLIENT: Symbol('INTERNAL_HTTP_CLIENT'),
+};

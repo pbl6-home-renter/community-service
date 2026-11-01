@@ -1,0 +1,49 @@
+name: Database Keepalive
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Only test database connectivity'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  keepalive:
+    name: Supabase Keepalive
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run database keepalive
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+          DB_SSL: 'true'
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::GitHub Actions secret SUPABASE_DATABASE_URL is not configured."
+            exit 1
+          fi
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && \
+             [ "${{ inputs.dry_run }}" = "true" ]; then
+            npx --yes tsx scripts/keep-alive.ts --dry-run
+          else
+            npx --yes tsx scripts/keep-alive.ts
+          fi

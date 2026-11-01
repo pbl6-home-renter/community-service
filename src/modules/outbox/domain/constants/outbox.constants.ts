@@ -1,0 +1,1 @@
+export const OUTBOX_MAX_ERROR_LENGTH = 4000;
