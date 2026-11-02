@@ -8,6 +8,7 @@ import { SampleModule } from 'modules/sample/sample.module';
 import { HealthModule } from 'modules/health/health.module';
 import { OutboxModule } from 'modules/outbox/outbox.module';
 import { ConversationModule } from 'modules/conversation/conversation.module';
+import { ConversationMemberModule } from 'modules/conversation-member/conversation-member.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ConversationModule } from 'modules/conversation/conversation.module';
     SecurityModule,
     SampleModule,
     ConversationModule,
+    ConversationMemberModule,
     OutboxModule,
     HealthModule,
   ],
