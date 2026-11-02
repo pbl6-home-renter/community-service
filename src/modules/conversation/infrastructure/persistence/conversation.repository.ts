@@ -33,6 +33,21 @@ export class TypeOrmConversationRepository implements ConversationRepository {
     return raw ? ConversationMapper.toDomain(raw) : null;
   }
 
+  async findByIdForUpdate(
+    id: Uuid,
+    context: TransactionContext,
+  ): Promise<ConversationEntity | null> {
+    if (!(context instanceof TypeOrmTransactionContext)) {
+      throw new Error('Conversation lock requires a TypeORM transaction');
+    }
+
+    const raw = await withTransaction(this.repository, context).findOne({
+      where: { id, isDeleted: false },
+      lock: { mode: 'pessimistic_write' },
+    });
+    return raw ? ConversationMapper.toDomain(raw) : null;
+  }
+
   async findByDirectPairKeyForUpdate(
     directPairKey: string,
     context: TransactionContext,

@@ -34,6 +34,28 @@ export class TypeOrmConversationMemberRepository implements ConversationMemberRe
     return raw ? ConversationMemberMapper.toDomain(raw) : null;
   }
 
+  async findByParticipant(
+    conversationId: Uuid,
+    participant: ConversationMemberIdentity,
+  ): Promise<ConversationMemberEntity | null> {
+    const where =
+      participant.participantType === ConversationParticipantType.USER
+        ? {
+            conversationId,
+            participantType: participant.participantType,
+            userId: participant.userId,
+            isDeleted: false,
+          }
+        : {
+            conversationId,
+            participantType: participant.participantType,
+            systemParticipantKey: participant.systemParticipantKey,
+            isDeleted: false,
+          };
+    const raw = await this.repository.findOne({ where });
+    return raw ? ConversationMemberMapper.toDomain(raw) : null;
+  }
+
   async findByIdForUpdate(
     id: Uuid,
     context: TransactionContext,

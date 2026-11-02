@@ -16,6 +16,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiTags,
+  getSchemaPath,
 } from '@nestjs/swagger';
 import { AuthenticatedUser } from 'shared/application/auth/authenticated-user';
 import { PaginatedResult } from 'shared/application/pagination/paginated-result';
@@ -39,6 +40,9 @@ import { ConversationCreateResponseDto } from '../responses/conversation-create.
 import { ConversationDetailResponseDto } from '../responses/conversation-detail.response.dto';
 import { ConversationListResponseDto } from '../responses/conversation-list.response.dto';
 import { ConversationLastMessageResponseDto } from '../responses/conversation-last-message.response.dto';
+import { ConversationMembersAddCommand } from '../../../application/commands/conversation-members-add/conversation-members-add.command';
+import { ConversationMembersAddRequestDto } from '../requests/conversation-members-add.request.dto';
+import { ConversationMemberEntity } from 'modules/conversation-member/domain/entities/conversation-member.entity';
 
 @ApiTags('Chat')
 @ApiBearerAuth()
@@ -114,6 +118,108 @@ export class ConversationController {
       ConversationDetailQueryResult
     >(new ConversationGetDetailQuery(conversationId, user.id));
     return ConversationDetailResponseDto.fromResult(result);
+  }
+
+  @Get(':conversationId/members')
+  @HttpCode(HttpStatus.OK)
+  @ResponseCode(ConversationResponseCodeConstant.CONVERSATION_MEMBERS_FETCHED)
+  @ApiOperation({
+    operationId: 'listConversationMembers',
+    summary: 'Xem thành viên hội thoại',
+  })
+  @ApiExtraModels(ConversationMemberResponseDto)
+  @ApiResponse({
+    status: HttpStatus.OK,
+    schema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['statusCode', 'code', 'data'],
+      properties: {
+        statusCode: { type: 'integer', enum: [HttpStatus.OK] },
+        code: {
+          type: 'string',
+          enum: [ConversationResponseCodeConstant.CONVERSATION_MEMBERS_FETCHED],
+        },
+        data: {
+          type: 'array',
+          items: { $ref: getSchemaPath(ConversationMemberResponseDto) },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'UNAUTHORIZED' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'FORBIDDEN' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'NOT_FOUND' })
+  @ApiResponse({
+    status: HttpStatus.SERVICE_UNAVAILABLE,
+    description: 'Auth service unavailable',
+  })
+  async listMembers(
+    @Param('conversationId', ParseUUIDPipe) conversationId: Uuid,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<ConversationMemberResponseDto[]> {
+    const result = await this.queryBus.execute<
+      ConversationGetDetailQuery,
+      ConversationDetailQueryResult
+    >(new ConversationGetDetailQuery(conversationId, user.id));
+    return result.members.map(ConversationMemberResponseDto.fromDomain);
+  }
+
+  @Post(':conversationId/members')
+  @HttpCode(HttpStatus.OK)
+  @ResponseCode(ConversationResponseCodeConstant.CONVERSATION_MEMBERS_ADDED)
+  @ApiOperation({
+    operationId: 'addConversationMembers',
+    summary: 'Thêm thành viên nhóm',
+  })
+  @ApiExtraModels(ConversationMemberResponseDto)
+  @ApiResponse({
+    status: HttpStatus.OK,
+    schema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['statusCode', 'code', 'data'],
+      properties: {
+        statusCode: { type: 'integer', enum: [HttpStatus.OK] },
+        code: {
+          type: 'string',
+          enum: [ConversationResponseCodeConstant.CONVERSATION_MEMBERS_ADDED],
+        },
+        data: {
+          type: 'array',
+          items: { $ref: getSchemaPath(ConversationMemberResponseDto) },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'INVALID_BODY' })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'UNAUTHORIZED' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'FORBIDDEN' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'NOT_FOUND' })
+  @ApiResponse({
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    description: 'VALIDATION_FAILED',
+  })
+  @ApiResponse({
+    status: HttpStatus.SERVICE_UNAVAILABLE,
+    description: 'Identity service unavailable; no members were added.',
+  })
+  async addMembers(
+    @Param('conversationId', ParseUUIDPipe) conversationId: Uuid,
+    @Body() request: ConversationMembersAddRequestDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<ConversationMemberResponseDto[]> {
+    const members = await this.commandBus.execute<
+      ConversationMembersAddCommand,
+      ConversationMemberEntity[]
+    >(
+      ConversationMembersAddRequestDto.toCommand(
+        request,
+        conversationId,
+        user.id,
+      ),
+    );
+    return members.map(ConversationMemberResponseDto.fromDomain);
   }
 
   @Post()

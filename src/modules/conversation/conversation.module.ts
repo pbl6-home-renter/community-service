@@ -4,6 +4,7 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { ConversationMemberModule } from 'modules/conversation-member/conversation-member.module';
 import { MessageModule } from 'modules/message/message.module';
 import { ConversationCreateCommandHandler } from './application/commands/conversation-create/conversation-create.command.handler';
+import { ConversationMembersAddCommandHandler } from './application/commands/conversation-members-add/conversation-members-add.command.handler';
 import { ConversationListQueryHandler } from './application/queries/conversation-list/conversation-list.query.handler';
 import { ConversationGetDetailQueryHandler } from './application/queries/conversation-get-detail/conversation-get-detail.query.handler';
 import { IdentityConversationUserLookupService } from './infrastructure/services/identity-conversation-user-lookup.service';
@@ -15,7 +16,10 @@ import { TypeOrmConversationRepository } from './infrastructure/persistence/conv
 import { ConversationMemberTypeormEntity } from 'modules/conversation-member/infrastructure/persistence/conversation-member.typeorm-entity';
 import { ConversationController } from './presentation/http/controllers/conversation.controller';
 
-const commandHandlers = [ConversationCreateCommandHandler];
+const commandHandlers = [
+  ConversationCreateCommandHandler,
+  ConversationMembersAddCommandHandler,
+];
 const queryHandlers = [
   ConversationListQueryHandler,
   ConversationGetDetailQueryHandler,

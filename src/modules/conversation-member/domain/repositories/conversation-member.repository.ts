@@ -5,6 +5,11 @@ import { ConversationMemberEntity } from '../entities/conversation-member.entity
 import { ConversationMemberIdentity } from '../entities/conversation-member.props';
 
 export interface ConversationMemberRepository extends BaseRepository<ConversationMemberEntity> {
+  findByParticipant(
+    conversationId: Uuid,
+    participant: ConversationMemberIdentity,
+  ): Promise<ConversationMemberEntity | null>;
+
   findByIdForUpdate(
     id: Uuid,
     context: TransactionContext,
