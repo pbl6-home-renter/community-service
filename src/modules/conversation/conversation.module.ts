@@ -21,17 +21,25 @@ import { ConversationMediaOwnershipInternalController } from './presentation/htt
 import { MessageTypeormEntity } from 'modules/message/infrastructure/persistence/message.typeorm-entity';
 import { ConversationMediaOwnershipLookupQueryHandler } from './application/queries/conversation-media-ownership-lookup/conversation-media-ownership-lookup.query.handler';
 import { TypeOrmConversationMediaOwnershipQuery } from './infrastructure/queries/typeorm-conversation-media-ownership.query';
+import { MessageSendCommandHandler } from 'modules/message/application/commands/message-send/message-send.command.handler';
+import { MessageListQueryHandler } from 'modules/message/application/queries/message-list/message-list.query.handler';
+import { TypeOrmMessagePageQuery } from 'modules/message/infrastructure/queries/typeorm-message-page.query';
+import { MessageController } from 'modules/message/presentation/http/controllers/message.controller';
+import { MESSAGE_DI_TOKEN } from 'modules/message/message.di-token';
+import { IdentityMessageMediaValidatorService } from 'modules/message/infrastructure/services/identity-message-media-validator.service';
 
 const commandHandlers = [
   ConversationCreateCommandHandler,
   ConversationMembersAddCommandHandler,
   ConversationMemberDepartureCommandHandler,
   ConversationMemberRoleUpdateCommandHandler,
+  MessageSendCommandHandler,
 ];
 const queryHandlers = [
   ConversationListQueryHandler,
   ConversationGetDetailQueryHandler,
   ConversationMediaOwnershipLookupQueryHandler,
+  MessageListQueryHandler,
 ];
 
 @Module({
@@ -48,6 +56,7 @@ const queryHandlers = [
   controllers: [
     ConversationController,
     ConversationMediaOwnershipInternalController,
+    MessageController,
   ],
   providers: [
     ...commandHandlers,
@@ -55,6 +64,8 @@ const queryHandlers = [
     TypeOrmConversationDetailQuery,
     TypeOrmConversationPageQuery,
     TypeOrmConversationMediaOwnershipQuery,
+    TypeOrmMessagePageQuery,
+    IdentityMessageMediaValidatorService,
     {
       provide: CONVERSATION_DI_TOKEN.USER_LOOKUP,
       useClass: IdentityConversationUserLookupService,
@@ -74,6 +85,14 @@ const queryHandlers = [
     {
       provide: CONVERSATION_DI_TOKEN.MEDIA_OWNERSHIP_QUERY,
       useExisting: TypeOrmConversationMediaOwnershipQuery,
+    },
+    {
+      provide: MESSAGE_DI_TOKEN.PAGE_QUERY,
+      useExisting: TypeOrmMessagePageQuery,
+    },
+    {
+      provide: MESSAGE_DI_TOKEN.MEDIA_VALIDATOR,
+      useExisting: IdentityMessageMediaValidatorService,
     },
   ],
   exports: [CONVERSATION_DI_TOKEN.REPOSITORY],
