@@ -10,4 +10,31 @@ export interface MembersAddedMessagePayloadData {
   }>;
 }
 
-export type MessagePayload = MembersAddedMessagePayloadData;
+export interface ConversationMemberSnapshot {
+  userId: Uuid;
+  displayName: string;
+}
+
+export interface MemberKickedMessagePayloadData {
+  action: 'member_kicked';
+  actorUserId: Uuid;
+  member: ConversationMemberSnapshot;
+}
+
+export interface MemberLeftMessagePayloadData {
+  action: 'member_left';
+  actorUserId: Uuid;
+  member: ConversationMemberSnapshot;
+}
+
+export interface AdminTransferredMessagePayloadData {
+  action: 'admin_transferred';
+  actorUserId: Uuid;
+  member: ConversationMemberSnapshot;
+}
+
+export type MessagePayload =
+  | MembersAddedMessagePayloadData
+  | MemberKickedMessagePayloadData
+  | MemberLeftMessagePayloadData
+  | AdminTransferredMessagePayloadData;
