@@ -1,0 +1,171 @@
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Query,
+  Res,
+} from '@nestjs/common';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import {
+  ApiBearerAuth,
+  ApiExtraModels,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+  getSchemaPath,
+} from '@nestjs/swagger';
+import { AuthenticatedUser } from 'shared/application/auth/authenticated-user';
+import { CursorPaginatedResult } from 'shared/application/pagination/cursor-paginated-result';
+import { ApiSuccessResponse } from 'shared/presentation/decorators/api-success-response.decorator';
+import { CurrentUser } from 'shared/presentation/decorators/auth/current-user.decorator';
+import { ResponseCode } from 'shared/presentation/decorators/response-code.decorator';
+import { CursorPaginatedResponseDto } from 'shared/presentation/pagination/cursor-paginated.response.dto';
+import { MessageSendCommand } from '../../../application/commands/message-send/message-send.command';
+import { MessageListQuery } from '../../../application/queries/message-list/message-list.query';
+import { MessageReadModel } from '../../../application/ports/message-page-query.port';
+import { MessageResponseCodeConstant } from '../constants/message-response-code.constant';
+import { MessageListRequestDto } from '../requests/message-list.request.dto';
+import { MessageSendRequestDto } from '../requests/message-send.request.dto';
+import { MessageListResponseDto } from '../responses/message-list.response.dto';
+import { MessageSendResponseDto } from '../responses/message-send.response.dto';
+import { MessageEntity } from '../../../domain/entities/message.entity';
+import { Response } from 'express';
+
+@ApiTags('Chat')
+@ApiBearerAuth()
+@Controller('messages')
+export class MessageController {
+  constructor(
+    private readonly commandBus: CommandBus,
+    private readonly queryBus: QueryBus,
+  ) {}
+
+  @Get()
+  @HttpCode(HttpStatus.OK)
+  @ResponseCode(MessageResponseCodeConstant.MESSAGES_FETCHED)
+  @ApiOperation({
+    operationId: 'getMessages',
+    summary: 'Liệt kê tin nhắn trong hội thoại',
+  })
+  @ApiExtraModels(MessageListResponseDto)
+  @ApiResponse({
+    status: HttpStatus.OK,
+    schema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['statusCode', 'code', 'data', 'pagination'],
+      properties: {
+        statusCode: { type: 'integer', enum: [HttpStatus.OK] },
+        code: {
+          type: 'string',
+          enum: [MessageResponseCodeConstant.MESSAGES_FETCHED],
+        },
+        data: {
+          type: 'array',
+          items: { $ref: getSchemaPath(MessageListResponseDto) },
+        },
+        pagination: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['type', 'pageSize', 'nextCursor', 'hasNextPage'],
+          properties: {
+            type: { type: 'string', enum: ['cursor'] },
+            pageSize: { type: 'integer', minimum: 1, maximum: 100 },
+            nextCursor: { type: 'string', nullable: true },
+            hasNextPage: { type: 'boolean' },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'INVALID_QUERY' })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'UNAUTHORIZED' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'FORBIDDEN' })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'CONVERSATION_NOT_FOUND',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    description: 'INVALID_CURSOR or VALIDATION_FAILED',
+  })
+  @ApiResponse({
+    status: HttpStatus.SERVICE_UNAVAILABLE,
+    description: 'AUTH_UNAVAILABLE',
+  })
+  @ApiResponse({
+    status: HttpStatus.TOO_MANY_REQUESTS,
+    description: 'TOO_MANY_REQUESTS',
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: 'INTERNAL_SERVER_ERROR',
+  })
+  async list(
+    @Query() request: MessageListRequestDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<CursorPaginatedResponseDto<MessageListResponseDto>> {
+    const result = await this.queryBus.execute<
+      MessageListQuery,
+      CursorPaginatedResult<MessageReadModel>
+    >(MessageListRequestDto.toQuery(request, user.id));
+    return CursorPaginatedResponseDto.create({
+      ...result,
+      data: result.data.map(MessageListResponseDto.fromReadModel),
+    });
+  }
+
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  @ResponseCode(MessageResponseCodeConstant.MESSAGE_SENT)
+  @ApiOperation({
+    operationId: 'postMessages',
+    summary: 'Gửi tin nhắn',
+  })
+  @ApiSuccessResponse({
+    status: HttpStatus.CREATED,
+    code: MessageResponseCodeConstant.MESSAGE_SENT,
+    dataDto: MessageSendResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'INVALID_REQUEST_BODY',
+  })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'UNAUTHORIZED' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'FORBIDDEN' })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'CONVERSATION_NOT_FOUND',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    description: 'MESSAGE_CONTENT_INVALID or VALIDATION_FAILED',
+  })
+  @ApiResponse({
+    status: HttpStatus.SERVICE_UNAVAILABLE,
+    description: 'SERVICE_UNAVAILABLE',
+  })
+  @ApiResponse({
+    status: HttpStatus.TOO_MANY_REQUESTS,
+    description: 'TOO_MANY_REQUESTS',
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: 'INTERNAL_SERVER_ERROR',
+  })
+  async send(
+    @Body() request: MessageSendRequestDto,
+    @CurrentUser() user: AuthenticatedUser,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<MessageSendResponseDto> {
+    const message = await this.commandBus.execute<
+      MessageSendCommand,
+      MessageEntity
+    >(MessageSendRequestDto.toCommand(request, user.id));
+    response.setHeader('Location', '/api/v1/messages');
+    return MessageSendResponseDto.fromDomain(message);
+  }
+}
