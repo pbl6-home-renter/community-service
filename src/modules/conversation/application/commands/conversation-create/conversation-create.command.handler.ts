@@ -22,6 +22,7 @@ import { CONVERSATION_DI_TOKEN } from '../../../conversation.di-token';
 import { ConversationCreateCommand } from './conversation-create.command';
 import { ConversationCreateResult } from './conversation-create.result';
 import { ConversationUserLookup } from '../../ports/conversation-user-lookup.port';
+import { ChatRealtimePort } from '../../ports/chat-realtime.port';
 
 @CommandHandler(ConversationCreateCommand)
 export class ConversationCreateCommandHandler implements ICommandHandler<
@@ -39,6 +40,8 @@ export class ConversationCreateCommandHandler implements ICommandHandler<
     private readonly unitOfWork: IUnitOfWork,
     @Inject(CONVERSATION_DI_TOKEN.USER_LOOKUP)
     private readonly userLookup: ConversationUserLookup,
+    @Inject(CONVERSATION_DI_TOKEN.CHAT_REALTIME)
+    private readonly realtime: ChatRealtimePort,
   ) {}
 
   async execute(
@@ -56,13 +59,18 @@ export class ConversationCreateCommandHandler implements ICommandHandler<
         : [command.callerUserId, ...command.memberUserIds];
     const displayNames = await this.getDisplayNames(requestedUserIds);
 
+    let result: ConversationCreateResult;
     if (command.kind === ConversationKind.DIRECT) {
-      return this.createOrReopenDirect(command, displayNames);
+      result = await this.createOrReopenDirect(command, displayNames);
+    } else if (command.kind === ConversationKind.GROUP) {
+      result = await this.createGroup(command, displayNames);
+    } else {
+      throw new ValidationException('Conversation kind is invalid');
     }
-    if (command.kind === ConversationKind.GROUP) {
-      return this.createGroup(command, displayNames);
+    for (const member of result.members) {
+      this.realtime.membershipActivated(member.userId!, result.conversation.id);
     }
-    throw new ValidationException('Conversation kind is invalid');
+    return result;
   }
 
   private async getDisplayNames(userIds: Uuid[]): Promise<Map<string, string>> {

@@ -41,7 +41,7 @@ jobs:
           context: .
           platforms: linux/amd64
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/rentify-backend:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/community-service:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -49,10 +49,13 @@ jobs:
     name: Deploy to AWS EC2
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: ${{ (github.event_name == 'push' || inputs.deploy_to_ec2 == true) && secrets.EC2_HOST != '' }}
+    if: ${{ github.event_name == 'push' || inputs.deploy_to_ec2 == true }}
+    env:
+      EC2_HOST: ${{ secrets.EC2_HOST }}
 
     steps:
       - name: SSH to EC2 and Trigger Deployment
+        if: ${{ env.EC2_HOST != '' }}
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}

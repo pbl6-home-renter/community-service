@@ -23,6 +23,7 @@ import { ConversationRepository } from '../../../domain/repositories/conversatio
 import { CONVERSATION_DI_TOKEN } from '../../../conversation.di-token';
 import { ConversationUserLookup } from '../../ports/conversation-user-lookup.port';
 import { ConversationMembersAddCommand } from './conversation-members-add.command';
+import { ChatRealtimePort } from '../../ports/chat-realtime.port';
 
 @CommandHandler(ConversationMembersAddCommand)
 export class ConversationMembersAddCommandHandler implements ICommandHandler<
@@ -40,6 +41,8 @@ export class ConversationMembersAddCommandHandler implements ICommandHandler<
     private readonly userLookup: ConversationUserLookup,
     @Inject(UNIT_OF_WORK_DI_TOKEN)
     private readonly unitOfWork: IUnitOfWork,
+    @Inject(CONVERSATION_DI_TOKEN.CHAT_REALTIME)
+    private readonly realtime: ChatRealtimePort,
   ) {}
 
   async execute(
@@ -57,7 +60,8 @@ export class ConversationMembersAddCommandHandler implements ICommandHandler<
     await this.ensureCallerIsGroupAdmin(command);
     const displayNames = await this.loadDisplayNames(normalizedUserIds);
 
-    return this.unitOfWork.run(async (context) => {
+    let systemMessage: MessageEntity | null = null;
+    const added = await this.unitOfWork.run(async (context) => {
       const conversation = await this.conversations.findByIdForUpdate(
         command.conversationId,
         context,
@@ -117,19 +121,21 @@ export class ConversationMembersAddCommandHandler implements ICommandHandler<
           displayName: member.displayName,
         })),
       });
-      await this.messages.save(
-        MessageEntity.create({
-          conversationId: command.conversationId,
-          senderMemberId: systemMember.id,
-          senderNameSnapshot: systemMember.displayName,
-          type: MessageType.SYSTEM,
-          payload: payload.toJSON(),
-          sequence,
-        }),
-        context,
-      );
+      systemMessage = MessageEntity.create({
+        conversationId: command.conversationId,
+        senderMemberId: systemMember.id,
+        senderNameSnapshot: systemMember.displayName,
+        type: MessageType.SYSTEM,
+        payload: payload.toJSON(),
+        sequence,
+      });
+      await this.messages.save(systemMessage, context);
       return addedMembers;
     });
+    if (systemMessage) this.realtime.messageCreated(systemMessage, null);
+    for (const member of added)
+      this.realtime.membershipActivated(member.userId!, command.conversationId);
+    return added;
   }
 
   private async ensureCallerIsGroupAdmin(

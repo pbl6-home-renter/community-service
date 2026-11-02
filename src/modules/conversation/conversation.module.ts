@@ -30,6 +30,9 @@ import { IdentityMessageMediaValidatorService } from 'modules/message/infrastruc
 import { MessageMarkReadCommandHandler } from 'modules/message/application/commands/message-mark-read/message-mark-read.command.handler';
 import { ConversationMetadataUpdateCommandHandler } from './application/commands/conversation-metadata-update/conversation-metadata-update.command.handler';
 import { IdentityConversationAvatarValidatorService } from './infrastructure/services/identity-conversation-avatar-validator.service';
+import { SecurityModule } from 'shared/security.module';
+import { ConversationSocketAccessService } from './application/queries/conversation-socket-access.service';
+import { ChatGateway } from './infrastructure/realtime/chat.gateway';
 
 const commandHandlers = [
   ConversationCreateCommandHandler,
@@ -50,6 +53,7 @@ const queryHandlers = [
 @Module({
   imports: [
     CqrsModule,
+    SecurityModule,
     ConversationMemberModule,
     MessageModule,
     TypeOrmModule.forFeature([
@@ -66,12 +70,18 @@ const queryHandlers = [
   providers: [
     ...commandHandlers,
     ...queryHandlers,
+    ConversationSocketAccessService,
+    ChatGateway,
     TypeOrmConversationDetailQuery,
     TypeOrmConversationPageQuery,
     TypeOrmConversationMediaOwnershipQuery,
     TypeOrmMessagePageQuery,
     IdentityMessageMediaValidatorService,
     IdentityConversationAvatarValidatorService,
+    {
+      provide: CONVERSATION_DI_TOKEN.CHAT_REALTIME,
+      useExisting: ChatGateway,
+    },
     {
       provide: CONVERSATION_DI_TOKEN.USER_LOOKUP,
       useClass: IdentityConversationUserLookupService,

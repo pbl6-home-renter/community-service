@@ -26,6 +26,7 @@ import { ConversationEntity } from '../../../domain/entities/conversation.entity
 import { CONVERSATION_DI_TOKEN } from '../../../conversation.di-token';
 import { ConversationAvatarValidatorPort } from '../../ports/conversation-avatar-validator.port';
 import { ConversationMetadataUpdateCommand } from './conversation-metadata-update.command';
+import { ChatRealtimePort } from '../../ports/chat-realtime.port';
 
 @CommandHandler(ConversationMetadataUpdateCommand)
 export class ConversationMetadataUpdateCommandHandler implements ICommandHandler<
@@ -43,6 +44,8 @@ export class ConversationMetadataUpdateCommandHandler implements ICommandHandler
     private readonly avatarValidator: ConversationAvatarValidatorPort,
     @Inject(UNIT_OF_WORK_DI_TOKEN)
     private readonly unitOfWork: IUnitOfWork,
+    @Inject(CONVERSATION_DI_TOKEN.CHAT_REALTIME)
+    private readonly realtime: ChatRealtimePort,
   ) {}
 
   async execute(
@@ -59,7 +62,8 @@ export class ConversationMetadataUpdateCommandHandler implements ICommandHandler
       );
     }
 
-    return this.unitOfWork.run(async (context) => {
+    const systemMessages: MessageEntity[] = [];
+    const result = await this.unitOfWork.run(async (context) => {
       const conversation = await this.conversations.findByIdForUpdate(
         command.conversationId,
         context,
@@ -100,11 +104,13 @@ export class ConversationMetadataUpdateCommandHandler implements ICommandHandler
           oldTitle,
           updated.title?.value ?? null,
         ).toJSON();
-        await this.saveSystemMessage(
-          conversation.id,
-          systemMember,
-          payload,
-          context,
+        systemMessages.push(
+          await this.saveSystemMessage(
+            conversation.id,
+            systemMember,
+            payload,
+            context,
+          ),
         );
       }
       if (avatarChanged) {
@@ -113,15 +119,20 @@ export class ConversationMetadataUpdateCommandHandler implements ICommandHandler
           oldAvatarMediaId,
           updated.avatarMediaId,
         ).toJSON();
-        await this.saveSystemMessage(
-          conversation.id,
-          systemMember,
-          payload,
-          context,
+        systemMessages.push(
+          await this.saveSystemMessage(
+            conversation.id,
+            systemMember,
+            payload,
+            context,
+          ),
         );
       }
       return updated;
     });
+    for (const message of systemMessages)
+      this.realtime.messageCreated(message, null);
+    return result;
   }
 
   private async findActor(
@@ -170,22 +181,21 @@ export class ConversationMetadataUpdateCommandHandler implements ICommandHandler
     systemMember: ConversationMemberEntity,
     payload: MessagePayload,
     context: TransactionContext,
-  ): Promise<void> {
+  ): Promise<MessageEntity> {
     const sequence = await this.messages.nextSequenceForUpdate(
       conversationId,
       context,
     );
-    await this.messages.save(
-      MessageEntity.create({
-        conversationId,
-        senderMemberId: systemMember.id,
-        senderNameSnapshot: systemMember.displayName,
-        type: MessageType.SYSTEM,
-        payload,
-        sequence,
-      }),
-      context,
-    );
+    const message = MessageEntity.create({
+      conversationId,
+      senderMemberId: systemMember.id,
+      senderNameSnapshot: systemMember.displayName,
+      type: MessageType.SYSTEM,
+      payload,
+      sequence,
+    });
+    await this.messages.save(message, context);
+    return message;
   }
 
   private async getOrCreateSystemMember(
