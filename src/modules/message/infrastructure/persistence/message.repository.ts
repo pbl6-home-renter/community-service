@@ -106,18 +106,45 @@ export class TypeOrmMessageRepository implements MessageRepository {
     return String(result[0].sequence);
   }
 
+  async hasSequenceForConversation(
+    conversationId: Uuid,
+    sequence: string,
+    context: TransactionContext,
+  ): Promise<boolean> {
+    if (!(context instanceof TypeOrmTransactionContext)) {
+      throw new Error('Message sequence lookup requires a TypeORM transaction');
+    }
+
+    const rows = (await context.manager.query(
+      `SELECT EXISTS (
+         SELECT 1 FROM messages
+         WHERE conversation_id = $1
+           AND sequence = $2::bigint
+           AND is_deleted = false
+       ) AS exists`,
+      [conversationId, sequence],
+    )) as Array<{ exists: boolean }>;
+    return rows[0]?.exists === true;
+  }
+
   async countUnread(
     conversationId: Uuid,
     memberId: Uuid,
     afterSequence: string,
+    throughSequence: string | null = null,
   ): Promise<number> {
-    return this.repository
+    const query = this.repository
       .createQueryBuilder('message')
       .where('message.conversationId = :conversationId', { conversationId })
       .andWhere('message.sequence > :afterSequence', { afterSequence })
       .andWhere('message.senderMemberId != :memberId', { memberId })
-      .andWhere('message.isDeleted = false')
-      .getCount();
+      .andWhere('message.isDeleted = false');
+    if (throughSequence !== null) {
+      query.andWhere('message.sequence <= :throughSequence', {
+        throughSequence,
+      });
+    }
+    return query.getCount();
   }
 
   async delete(id: Uuid, context?: TransactionContext): Promise<void> {

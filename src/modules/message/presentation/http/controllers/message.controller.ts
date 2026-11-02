@@ -24,13 +24,17 @@ import { CurrentUser } from 'shared/presentation/decorators/auth/current-user.de
 import { ResponseCode } from 'shared/presentation/decorators/response-code.decorator';
 import { CursorPaginatedResponseDto } from 'shared/presentation/pagination/cursor-paginated.response.dto';
 import { MessageSendCommand } from '../../../application/commands/message-send/message-send.command';
+import { MessageMarkReadCommand } from '../../../application/commands/message-mark-read/message-mark-read.command';
+import { MessageMarkReadResult } from '../../../application/commands/message-mark-read/message-mark-read.result';
 import { MessageListQuery } from '../../../application/queries/message-list/message-list.query';
 import { MessageReadModel } from '../../../application/ports/message-page-query.port';
 import { MessageResponseCodeConstant } from '../constants/message-response-code.constant';
 import { MessageListRequestDto } from '../requests/message-list.request.dto';
 import { MessageSendRequestDto } from '../requests/message-send.request.dto';
+import { MessageMarkReadRequestDto } from '../requests/message-mark-read.request.dto';
 import { MessageListResponseDto } from '../responses/message-list.response.dto';
 import { MessageSendResponseDto } from '../responses/message-send.response.dto';
+import { MessageMarkReadResponseDto } from '../responses/message-mark-read.response.dto';
 import { MessageEntity } from '../../../domain/entities/message.entity';
 import { Response } from 'express';
 
@@ -116,6 +120,54 @@ export class MessageController {
       ...result,
       data: result.data.map(MessageListResponseDto.fromReadModel),
     });
+  }
+
+  @Post('mark-read')
+  @HttpCode(HttpStatus.OK)
+  @ResponseCode(MessageResponseCodeConstant.MESSAGES_MARKED_READ)
+  @ApiOperation({
+    operationId: 'postMessagesMarkRead',
+    summary: 'Đánh dấu hội thoại đã đọc',
+  })
+  @ApiSuccessResponse({
+    code: MessageResponseCodeConstant.MESSAGES_MARKED_READ,
+    dataDto: MessageMarkReadResponseDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'INVALID_REQUEST_BODY',
+  })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'UNAUTHORIZED' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'FORBIDDEN' })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'CONVERSATION_NOT_FOUND',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    description: 'READ_CURSOR_INVALID or VALIDATION_FAILED',
+  })
+  @ApiResponse({
+    status: HttpStatus.SERVICE_UNAVAILABLE,
+    description: 'AUTH_UNAVAILABLE',
+  })
+  @ApiResponse({
+    status: HttpStatus.TOO_MANY_REQUESTS,
+    description: 'TOO_MANY_REQUESTS',
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: 'INTERNAL_SERVER_ERROR',
+  })
+  async markRead(
+    @Body() request: MessageMarkReadRequestDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<MessageMarkReadResponseDto> {
+    const result = await this.commandBus.execute<
+      MessageMarkReadCommand,
+      MessageMarkReadResult
+    >(MessageMarkReadRequestDto.toCommand(request, user.id));
+    return MessageMarkReadResponseDto.fromResult(result);
   }
 
   @Post()

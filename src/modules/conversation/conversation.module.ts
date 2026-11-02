@@ -27,6 +27,7 @@ import { TypeOrmMessagePageQuery } from 'modules/message/infrastructure/queries/
 import { MessageController } from 'modules/message/presentation/http/controllers/message.controller';
 import { MESSAGE_DI_TOKEN } from 'modules/message/message.di-token';
 import { IdentityMessageMediaValidatorService } from 'modules/message/infrastructure/services/identity-message-media-validator.service';
+import { MessageMarkReadCommandHandler } from 'modules/message/application/commands/message-mark-read/message-mark-read.command.handler';
 
 const commandHandlers = [
   ConversationCreateCommandHandler,
@@ -34,6 +35,7 @@ const commandHandlers = [
   ConversationMemberDepartureCommandHandler,
   ConversationMemberRoleUpdateCommandHandler,
   MessageSendCommandHandler,
+  MessageMarkReadCommandHandler,
 ];
 const queryHandlers = [
   ConversationListQueryHandler,
