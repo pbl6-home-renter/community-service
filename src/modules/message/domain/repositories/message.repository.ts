@@ -18,4 +18,15 @@ export interface MessageRepository extends BaseRepository<MessageEntity> {
     conversationId: Uuid,
     context: TransactionContext,
   ): Promise<string>;
+
+  latestSequenceForUpdate(
+    conversationId: Uuid,
+    context: TransactionContext,
+  ): Promise<string>;
+
+  countUnread(
+    conversationId: Uuid,
+    memberId: Uuid,
+    afterSequence: string,
+  ): Promise<number>;
 }

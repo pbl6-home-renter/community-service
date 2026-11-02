@@ -81,6 +81,45 @@ export class TypeOrmMessageRepository implements MessageRepository {
     return String(result[0].sequence);
   }
 
+  async latestSequenceForUpdate(
+    conversationId: Uuid,
+    context: TransactionContext,
+  ): Promise<string> {
+    if (!(context instanceof TypeOrmTransactionContext)) {
+      throw new Error('Message sequence lookup requires a TypeORM transaction');
+    }
+
+    const manager = context.manager;
+    const conversations = (await manager.query(
+      'SELECT id FROM conversations WHERE id = $1 AND is_deleted = false FOR UPDATE',
+      [conversationId],
+    )) as Array<{ id: Uuid }>;
+    if (conversations.length === 0) {
+      throw new Error(`Conversation ${conversationId} does not exist`);
+    }
+
+    const result = (await manager.query(
+      'SELECT COALESCE(MAX(sequence), 0) AS sequence FROM messages WHERE conversation_id = $1',
+      [conversationId],
+    )) as Array<{ sequence: string }>;
+
+    return String(result[0].sequence);
+  }
+
+  async countUnread(
+    conversationId: Uuid,
+    memberId: Uuid,
+    afterSequence: string,
+  ): Promise<number> {
+    return this.repository
+      .createQueryBuilder('message')
+      .where('message.conversationId = :conversationId', { conversationId })
+      .andWhere('message.sequence > :afterSequence', { afterSequence })
+      .andWhere('message.senderMemberId != :memberId', { memberId })
+      .andWhere('message.isDeleted = false')
+      .getCount();
+  }
+
   async delete(id: Uuid, context?: TransactionContext): Promise<void> {
     await withTransaction(this.repository, context).update(id, {
       isDeleted: true,
