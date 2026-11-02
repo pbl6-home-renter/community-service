@@ -17,6 +17,10 @@ import { ConversationTypeormEntity } from './infrastructure/persistence/conversa
 import { TypeOrmConversationRepository } from './infrastructure/persistence/conversation.repository';
 import { ConversationMemberTypeormEntity } from 'modules/conversation-member/infrastructure/persistence/conversation-member.typeorm-entity';
 import { ConversationController } from './presentation/http/controllers/conversation.controller';
+import { ConversationMediaOwnershipInternalController } from './presentation/http/controllers/conversation-media-ownership-internal.controller';
+import { MessageTypeormEntity } from 'modules/message/infrastructure/persistence/message.typeorm-entity';
+import { ConversationMediaOwnershipLookupQueryHandler } from './application/queries/conversation-media-ownership-lookup/conversation-media-ownership-lookup.query.handler';
+import { TypeOrmConversationMediaOwnershipQuery } from './infrastructure/queries/typeorm-conversation-media-ownership.query';
 
 const commandHandlers = [
   ConversationCreateCommandHandler,
@@ -27,6 +31,7 @@ const commandHandlers = [
 const queryHandlers = [
   ConversationListQueryHandler,
   ConversationGetDetailQueryHandler,
+  ConversationMediaOwnershipLookupQueryHandler,
 ];
 
 @Module({
@@ -37,14 +42,19 @@ const queryHandlers = [
     TypeOrmModule.forFeature([
       ConversationTypeormEntity,
       ConversationMemberTypeormEntity,
+      MessageTypeormEntity,
     ]),
   ],
-  controllers: [ConversationController],
+  controllers: [
+    ConversationController,
+    ConversationMediaOwnershipInternalController,
+  ],
   providers: [
     ...commandHandlers,
     ...queryHandlers,
     TypeOrmConversationDetailQuery,
     TypeOrmConversationPageQuery,
+    TypeOrmConversationMediaOwnershipQuery,
     {
       provide: CONVERSATION_DI_TOKEN.USER_LOOKUP,
       useClass: IdentityConversationUserLookupService,
@@ -60,6 +70,10 @@ const queryHandlers = [
     {
       provide: CONVERSATION_DI_TOKEN.PAGE_QUERY,
       useExisting: TypeOrmConversationPageQuery,
+    },
+    {
+      provide: CONVERSATION_DI_TOKEN.MEDIA_OWNERSHIP_QUERY,
+      useExisting: TypeOrmConversationMediaOwnershipQuery,
     },
   ],
   exports: [CONVERSATION_DI_TOKEN.REPOSITORY],
