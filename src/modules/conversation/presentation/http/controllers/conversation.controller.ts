@@ -8,6 +8,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
@@ -45,6 +46,8 @@ import { ConversationMembersAddCommand } from '../../../application/commands/con
 import { ConversationMembersAddRequestDto } from '../requests/conversation-members-add.request.dto';
 import { ConversationMemberEntity } from 'modules/conversation-member/domain/entities/conversation-member.entity';
 import { ConversationMemberDepartureCommand } from '../../../application/commands/conversation-member-departure/conversation-member-departure.command';
+import { ConversationMemberRoleUpdateRequestDto } from '../requests/conversation-member-role-update.request.dto';
+import { ConversationMemberRoleUpdateCommand } from '../../../application/commands/conversation-member-role-update/conversation-member-role-update.command';
 
 @ApiTags('Chat')
 @ApiBearerAuth()
@@ -190,6 +193,46 @@ export class ConversationController {
         user.id,
         userId,
         'kick',
+      ),
+    );
+  }
+
+  @Put(':conversationId/members/:userId/role')
+  @HttpCode(HttpStatus.OK)
+  @ResponseCode(
+    ConversationResponseCodeConstant.CONVERSATION_MEMBER_ROLE_UPDATED,
+  )
+  @ApiOperation({
+    operationId: 'updateConversationMemberRole',
+    summary: 'Đổi vai trò thành viên',
+  })
+  @ApiSuccessResponse({
+    code: ConversationResponseCodeConstant.CONVERSATION_MEMBER_ROLE_UPDATED,
+  })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'INVALID_BODY' })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'UNAUTHORIZED' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'FORBIDDEN' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'NOT_FOUND' })
+  @ApiResponse({
+    status: HttpStatus.CONFLICT,
+    description: 'LAST_ADMIN_CANNOT_BE_DEMOTED',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    description: 'VALIDATION_FAILED',
+  })
+  async updateMemberRole(
+    @Param('conversationId', ParseUUIDPipe) conversationId: Uuid,
+    @Param('userId', ParseUUIDPipe) userId: Uuid,
+    @Body() request: ConversationMemberRoleUpdateRequestDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<void> {
+    await this.commandBus.execute<ConversationMemberRoleUpdateCommand, void>(
+      ConversationMemberRoleUpdateRequestDto.toCommand(
+        request,
+        conversationId,
+        userId,
+        user.id,
       ),
     );
   }

@@ -33,8 +33,19 @@ export interface AdminTransferredMessagePayloadData {
   member: ConversationMemberSnapshot;
 }
 
+export type ConversationMemberRoleValue = 'admin' | 'member';
+
+export interface MemberRoleChangedMessagePayloadData {
+  action: 'member_role_changed';
+  actorUserId: Uuid;
+  member: ConversationMemberSnapshot;
+  oldRole: ConversationMemberRoleValue;
+  newRole: ConversationMemberRoleValue;
+}
+
 export type MessagePayload =
   | MembersAddedMessagePayloadData
   | MemberKickedMessagePayloadData
   | MemberLeftMessagePayloadData
-  | AdminTransferredMessagePayloadData;
+  | AdminTransferredMessagePayloadData
+  | MemberRoleChangedMessagePayloadData;
