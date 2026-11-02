@@ -15,6 +15,7 @@ import { IUnitOfWork } from 'shared/application/ports/unit-of-work.port';
 import { MessageConversationNotFoundException } from '../../../domain/exceptions/message-conversation-not-found.exception';
 import { MessageMarkReadCommand } from './message-mark-read.command';
 import { MessageMarkReadResult } from './message-mark-read.result';
+import { ChatRealtimePort } from 'modules/conversation/application/ports/chat-realtime.port';
 
 @CommandHandler(MessageMarkReadCommand)
 export class MessageMarkReadCommandHandler implements ICommandHandler<
@@ -30,12 +31,15 @@ export class MessageMarkReadCommandHandler implements ICommandHandler<
     private readonly messages: MessageRepository,
     @Inject(UNIT_OF_WORK_DI_TOKEN)
     private readonly unitOfWork: IUnitOfWork,
+    @Inject(CONVERSATION_DI_TOKEN.CHAT_REALTIME)
+    private readonly realtime: ChatRealtimePort,
   ) {}
 
   async execute(
     command: MessageMarkReadCommand,
   ): Promise<MessageMarkReadResult> {
-    return this.unitOfWork.run(async (context) => {
+    let changed = false;
+    const result = await this.unitOfWork.run(async (context) => {
       const conversation = await this.conversations.findByIdForUpdate(
         command.conversationId,
         context,
@@ -81,7 +85,7 @@ export class MessageMarkReadCommandHandler implements ICommandHandler<
         throw new ConversationMemberReadCursorInvalidException();
       }
 
-      const changed = member.markRead(command.lastReadSequence);
+      changed = member.markRead(command.lastReadSequence);
       if (changed) await this.members.save(member, context);
 
       return {
@@ -96,5 +100,13 @@ export class MessageMarkReadCommandHandler implements ICommandHandler<
         ),
       };
     });
+    if (changed)
+      this.realtime.readUpdated(
+        command.actorUserId,
+        result.conversationId,
+        result.unreadCount,
+        command.lastReadSequence,
+      );
+    return result;
   }
 }

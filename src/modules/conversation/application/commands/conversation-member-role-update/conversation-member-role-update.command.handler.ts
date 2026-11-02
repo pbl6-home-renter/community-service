@@ -26,6 +26,7 @@ import { ConversationNotFoundException } from '../../../domain/exceptions/conver
 import { ConversationRepository } from '../../../domain/repositories/conversation.repository';
 import { CONVERSATION_DI_TOKEN } from '../../../conversation.di-token';
 import { ConversationMemberRoleUpdateCommand } from './conversation-member-role-update.command';
+import { ChatRealtimePort } from '../../ports/chat-realtime.port';
 
 @CommandHandler(ConversationMemberRoleUpdateCommand)
 export class ConversationMemberRoleUpdateCommandHandler implements ICommandHandler<
@@ -41,9 +42,12 @@ export class ConversationMemberRoleUpdateCommandHandler implements ICommandHandl
     private readonly messages: MessageRepository,
     @Inject(UNIT_OF_WORK_DI_TOKEN)
     private readonly unitOfWork: IUnitOfWork,
+    @Inject(CONVERSATION_DI_TOKEN.CHAT_REALTIME)
+    private readonly realtime: ChatRealtimePort,
   ) {}
 
   async execute(command: ConversationMemberRoleUpdateCommand): Promise<void> {
+    let systemMessage: MessageEntity | null = null;
     await this.unitOfWork.run(async (context) => {
       const conversation = await this.conversations.findByIdForUpdate(
         command.conversationId,
@@ -115,13 +119,14 @@ export class ConversationMemberRoleUpdateCommandHandler implements ICommandHandl
         oldRole === ConversationMemberRole.ADMIN ? 'admin' : 'member',
         command.role === ConversationMemberRole.ADMIN ? 'admin' : 'member',
       ).toJSON();
-      await this.saveSystemMessage(
+      systemMessage = await this.saveSystemMessage(
         command.conversationId,
         systemMember,
         payload,
         context,
       );
     });
+    if (systemMessage) this.realtime.messageCreated(systemMessage, null);
   }
 
   private async findMemberForUpdate(
@@ -141,22 +146,21 @@ export class ConversationMemberRoleUpdateCommandHandler implements ICommandHandl
     systemMember: ConversationMemberEntity,
     payload: MessagePayload,
     context: TransactionContext,
-  ): Promise<void> {
+  ): Promise<MessageEntity> {
     const sequence = await this.messages.nextSequenceForUpdate(
       conversationId,
       context,
     );
-    await this.messages.save(
-      MessageEntity.create({
-        conversationId,
-        senderMemberId: systemMember.id,
-        senderNameSnapshot: systemMember.displayName,
-        type: MessageType.SYSTEM,
-        payload,
-        sequence,
-      }),
-      context,
-    );
+    const message = MessageEntity.create({
+      conversationId,
+      senderMemberId: systemMember.id,
+      senderNameSnapshot: systemMember.displayName,
+      type: MessageType.SYSTEM,
+      payload,
+      sequence,
+    });
+    await this.messages.save(message, context);
+    return message;
   }
 
   private async getOrCreateSystemMember(

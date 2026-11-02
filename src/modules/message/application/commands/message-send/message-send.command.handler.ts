@@ -17,6 +17,7 @@ import { MessageSendCommand } from './message-send.command';
 import { MESSAGE_DI_TOKEN } from '../../../message.di-token';
 import { ConversationForbiddenException } from 'modules/conversation/domain/exceptions/conversation-forbidden.exception';
 import { MessageConversationNotFoundException } from '../../../domain/exceptions/message-conversation-not-found.exception';
+import { ChatRealtimePort } from 'modules/conversation/application/ports/chat-realtime.port';
 
 @CommandHandler(MessageSendCommand)
 export class MessageSendCommandHandler implements ICommandHandler<
@@ -34,6 +35,8 @@ export class MessageSendCommandHandler implements ICommandHandler<
     private readonly mediaValidator: MessageMediaValidatorPort,
     @Inject(UNIT_OF_WORK_DI_TOKEN)
     private readonly unitOfWork: IUnitOfWork,
+    @Inject(CONVERSATION_DI_TOKEN.CHAT_REALTIME)
+    private readonly realtime: ChatRealtimePort,
   ) {}
 
   async execute(command: MessageSendCommand): Promise<MessageEntity> {
@@ -64,7 +67,8 @@ export class MessageSendCommandHandler implements ICommandHandler<
       );
     }
 
-    return this.unitOfWork.run(async (context) => {
+    let createdMessage: MessageEntity | null = null;
+    const result = await this.unitOfWork.run(async (context) => {
       const conversation = await this.conversations.findByIdForUpdate(
         command.conversationId,
         context,
@@ -104,8 +108,12 @@ export class MessageSendCommandHandler implements ICommandHandler<
         sequence,
       });
       await this.messages.save(message, context);
+      createdMessage = message;
       return message;
     });
+    if (createdMessage)
+      this.realtime.messageCreated(createdMessage, command.senderUserId);
+    return result;
   }
 
   private validateContent(command: MessageSendCommand): void {

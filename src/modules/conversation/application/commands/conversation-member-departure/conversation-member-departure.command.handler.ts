@@ -28,6 +28,7 @@ import { ConversationNotFoundException } from '../../../domain/exceptions/conver
 import { ConversationRepository } from '../../../domain/repositories/conversation.repository';
 import { CONVERSATION_DI_TOKEN } from '../../../conversation.di-token';
 import { ConversationMemberDepartureCommand } from './conversation-member-departure.command';
+import { ChatRealtimePort } from '../../ports/chat-realtime.port';
 
 @CommandHandler(ConversationMemberDepartureCommand)
 export class ConversationMemberDepartureCommandHandler implements ICommandHandler<
@@ -43,9 +44,12 @@ export class ConversationMemberDepartureCommandHandler implements ICommandHandle
     private readonly messages: MessageRepository,
     @Inject(UNIT_OF_WORK_DI_TOKEN)
     private readonly unitOfWork: IUnitOfWork,
-  ) { }
+    @Inject(CONVERSATION_DI_TOKEN.CHAT_REALTIME)
+    private readonly realtime: ChatRealtimePort,
+  ) {}
 
   async execute(command: ConversationMemberDepartureCommand): Promise<void> {
+    const systemMessages: MessageEntity[] = [];
     await this.unitOfWork.run(async (context) => {
       const conversation = await this.lockGroup(
         command.conversationId,
@@ -90,9 +94,9 @@ export class ConversationMemberDepartureCommandHandler implements ICommandHandle
 
       const successor =
         target.role === ConversationMemberRole.ADMIN &&
-          !remainingMembers.some(
-            (member) => member.role === ConversationMemberRole.ADMIN,
-          )
+        !remainingMembers.some(
+          (member) => member.role === ConversationMemberRole.ADMIN,
+        )
           ? remainingMembers[0]
           : null;
 
@@ -114,19 +118,21 @@ export class ConversationMemberDepartureCommandHandler implements ICommandHandle
       const departurePayload =
         command.action === 'kick'
           ? MemberKickedMessagePayload.create(command.actorUserId, {
-            userId: target.userId!,
-            displayName: target.displayName,
-          }).toJSON()
+              userId: target.userId!,
+              displayName: target.displayName,
+            }).toJSON()
           : MemberLeftMessagePayload.create(command.actorUserId, {
-            userId: target.userId!,
-            displayName: target.displayName,
-          }).toJSON();
-      let leftSequence = await this.saveSystemMessage(
+              userId: target.userId!,
+              displayName: target.displayName,
+            }).toJSON();
+      const departureMessage = await this.saveSystemMessage(
         conversation.id,
         systemMember,
         departurePayload,
         context,
       );
+      systemMessages.push(departureMessage);
+      let leftSequence = departureMessage.sequence;
 
       if (successor) {
         const transferPayload = AdminTransferredMessagePayload.create(
@@ -136,17 +142,25 @@ export class ConversationMemberDepartureCommandHandler implements ICommandHandle
             displayName: successor.displayName,
           },
         ).toJSON();
-        leftSequence = await this.saveSystemMessage(
+        const transferMessage = await this.saveSystemMessage(
           conversation.id,
           systemMember,
           transferPayload,
           context,
         );
+        systemMessages.push(transferMessage);
+        leftSequence = transferMessage.sequence;
       }
 
       target.markReadOnly(new Date(), leftSequence);
       await this.members.save(target, context);
     });
+    this.realtime.membershipRevoked(
+      command.targetUserId,
+      command.conversationId,
+    );
+    for (const message of systemMessages)
+      this.realtime.messageCreated(message, null);
   }
 
   private async lockGroup(
@@ -203,23 +217,21 @@ export class ConversationMemberDepartureCommandHandler implements ICommandHandle
     systemMember: ConversationMemberEntity,
     payload: MessagePayload,
     context: TransactionContext,
-  ): Promise<string> {
+  ): Promise<MessageEntity> {
     const sequence = await this.messages.nextSequenceForUpdate(
       conversationId,
       context,
     );
-    await this.messages.save(
-      MessageEntity.create({
-        conversationId,
-        senderMemberId: systemMember.id,
-        senderNameSnapshot: systemMember.displayName,
-        type: MessageType.SYSTEM,
-        payload,
-        sequence,
-      }),
-      context,
-    );
-    return sequence;
+    const message = MessageEntity.create({
+      conversationId,
+      senderMemberId: systemMember.id,
+      senderNameSnapshot: systemMember.displayName,
+      type: MessageType.SYSTEM,
+      payload,
+      sequence,
+    });
+    await this.messages.save(message, context);
+    return message;
   }
 
   private async getOrCreateSystemMember(
