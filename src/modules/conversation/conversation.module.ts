@@ -28,6 +28,8 @@ import { MessageController } from 'modules/message/presentation/http/controllers
 import { MESSAGE_DI_TOKEN } from 'modules/message/message.di-token';
 import { IdentityMessageMediaValidatorService } from 'modules/message/infrastructure/services/identity-message-media-validator.service';
 import { MessageMarkReadCommandHandler } from 'modules/message/application/commands/message-mark-read/message-mark-read.command.handler';
+import { ConversationMetadataUpdateCommandHandler } from './application/commands/conversation-metadata-update/conversation-metadata-update.command.handler';
+import { IdentityConversationAvatarValidatorService } from './infrastructure/services/identity-conversation-avatar-validator.service';
 
 const commandHandlers = [
   ConversationCreateCommandHandler,
@@ -36,6 +38,7 @@ const commandHandlers = [
   ConversationMemberRoleUpdateCommandHandler,
   MessageSendCommandHandler,
   MessageMarkReadCommandHandler,
+  ConversationMetadataUpdateCommandHandler,
 ];
 const queryHandlers = [
   ConversationListQueryHandler,
@@ -68,6 +71,7 @@ const queryHandlers = [
     TypeOrmConversationMediaOwnershipQuery,
     TypeOrmMessagePageQuery,
     IdentityMessageMediaValidatorService,
+    IdentityConversationAvatarValidatorService,
     {
       provide: CONVERSATION_DI_TOKEN.USER_LOOKUP,
       useClass: IdentityConversationUserLookupService,
@@ -95,6 +99,10 @@ const queryHandlers = [
     {
       provide: MESSAGE_DI_TOKEN.MEDIA_VALIDATOR,
       useExisting: IdentityMessageMediaValidatorService,
+    },
+    {
+      provide: CONVERSATION_DI_TOKEN.AVATAR_VALIDATOR,
+      useExisting: IdentityConversationAvatarValidatorService,
     },
   ],
   exports: [CONVERSATION_DI_TOKEN.REPOSITORY],

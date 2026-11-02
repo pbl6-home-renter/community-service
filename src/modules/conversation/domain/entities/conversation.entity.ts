@@ -56,4 +56,23 @@ export class ConversationEntity extends AggregateRoot {
       props.isDeleted ?? false,
     );
   }
+
+  withGroupMetadata(
+    title: ConversationTitle | null,
+    avatarMediaId: Uuid | null,
+  ): ConversationEntity {
+    return ConversationEntity.reconstitute({
+      id: this.id,
+      kind: this.kind,
+      contextType: this.contextType,
+      contextId: this.contextId,
+      directPairKey: this.directPairKey,
+      title,
+      avatarMediaId,
+      createdByUserId: this.createdByUserId,
+      createdAt: this.createdAt,
+      updatedAt: new Date(),
+      isDeleted: this.isDeleted,
+    });
+  }
 }

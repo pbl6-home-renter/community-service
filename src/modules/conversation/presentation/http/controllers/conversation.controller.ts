@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   ParseUUIDPipe,
   Post,
   Put,
@@ -48,6 +49,10 @@ import { ConversationMemberEntity } from 'modules/conversation-member/domain/ent
 import { ConversationMemberDepartureCommand } from '../../../application/commands/conversation-member-departure/conversation-member-departure.command';
 import { ConversationMemberRoleUpdateRequestDto } from '../requests/conversation-member-role-update.request.dto';
 import { ConversationMemberRoleUpdateCommand } from '../../../application/commands/conversation-member-role-update/conversation-member-role-update.command';
+import { ConversationEntity } from '../../../domain/entities/conversation.entity';
+import { ConversationMetadataUpdateCommand } from '../../../application/commands/conversation-metadata-update/conversation-metadata-update.command';
+import { ConversationMetadataUpdateRequestDto } from '../requests/conversation-metadata-update.request.dto';
+import { ConversationMetadataUpdateResponseDto } from '../responses/conversation-metadata-update.response.dto';
 
 @ApiTags('Chat')
 @ApiBearerAuth()
@@ -57,6 +62,47 @@ export class ConversationController {
     private readonly commandBus: CommandBus,
     private readonly queryBus: QueryBus,
   ) {}
+
+  @Patch(':conversationId')
+  @HttpCode(HttpStatus.OK)
+  @ResponseCode(ConversationResponseCodeConstant.CONVERSATION_UPDATED)
+  @ApiOperation({
+    operationId: 'updateConversation',
+    summary: 'Sửa tên hoặc ảnh nhóm',
+  })
+  @ApiSuccessResponse({
+    code: ConversationResponseCodeConstant.CONVERSATION_UPDATED,
+    dataDto: ConversationMetadataUpdateResponseDto,
+  })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'INVALID_PATH' })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'UNAUTHORIZED' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'FORBIDDEN' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'NOT_FOUND' })
+  @ApiResponse({
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    description: 'VALIDATION_FAILED or CONVERSATION_AVATAR_INVALID',
+  })
+  @ApiResponse({
+    status: HttpStatus.SERVICE_UNAVAILABLE,
+    description: 'Identity service unavailable; conversation was not updated.',
+  })
+  async updateMetadata(
+    @Param('conversationId', ParseUUIDPipe) conversationId: Uuid,
+    @Body() request: ConversationMetadataUpdateRequestDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<ConversationMetadataUpdateResponseDto> {
+    const conversation = await this.commandBus.execute<
+      ConversationMetadataUpdateCommand,
+      ConversationEntity
+    >(
+      ConversationMetadataUpdateRequestDto.toCommand(
+        request,
+        conversationId,
+        user.id,
+      ),
+    );
+    return ConversationMetadataUpdateResponseDto.fromDomain(conversation);
+  }
 
   @Get()
   @HttpCode(HttpStatus.OK)
