@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -43,6 +44,7 @@ import { ConversationLastMessageResponseDto } from '../responses/conversation-la
 import { ConversationMembersAddCommand } from '../../../application/commands/conversation-members-add/conversation-members-add.command';
 import { ConversationMembersAddRequestDto } from '../requests/conversation-members-add.request.dto';
 import { ConversationMemberEntity } from 'modules/conversation-member/domain/entities/conversation-member.entity';
+import { ConversationMemberDepartureCommand } from '../../../application/commands/conversation-member-departure/conversation-member-departure.command';
 
 @ApiTags('Chat')
 @ApiBearerAuth()
@@ -118,6 +120,78 @@ export class ConversationController {
       ConversationDetailQueryResult
     >(new ConversationGetDetailQuery(conversationId, user.id));
     return ConversationDetailResponseDto.fromResult(result);
+  }
+
+  @Delete(':conversationId/members/me')
+  @HttpCode(HttpStatus.OK)
+  @ResponseCode(ConversationResponseCodeConstant.CONVERSATION_LEFT)
+  @ApiOperation({
+    operationId: 'leaveConversation',
+    summary: 'Rời nhóm chat',
+  })
+  @ApiSuccessResponse({
+    code: ConversationResponseCodeConstant.CONVERSATION_LEFT,
+  })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'UNAUTHORIZED' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'FORBIDDEN' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'NOT_FOUND' })
+  @ApiResponse({
+    status: HttpStatus.CONFLICT,
+    description: 'GROUP_MUST_RETAIN_ACTIVE_MEMBER',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    description: 'VALIDATION_FAILED',
+  })
+  async leave(
+    @Param('conversationId', ParseUUIDPipe) conversationId: Uuid,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<void> {
+    await this.commandBus.execute<ConversationMemberDepartureCommand, void>(
+      new ConversationMemberDepartureCommand(
+        conversationId,
+        user.id,
+        user.id,
+        'leave',
+      ),
+    );
+  }
+
+  @Delete(':conversationId/members/:userId')
+  @HttpCode(HttpStatus.OK)
+  @ResponseCode(ConversationResponseCodeConstant.CONVERSATION_MEMBER_REMOVED)
+  @ApiOperation({
+    operationId: 'removeConversationMember',
+    summary: 'Kick thành viên khỏi nhóm',
+  })
+  @ApiSuccessResponse({
+    code: ConversationResponseCodeConstant.CONVERSATION_MEMBER_REMOVED,
+  })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'INVALID_PATH' })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'UNAUTHORIZED' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'FORBIDDEN' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'NOT_FOUND' })
+  @ApiResponse({
+    status: HttpStatus.CONFLICT,
+    description: 'GROUP_MUST_RETAIN_ACTIVE_MEMBER',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    description: 'VALIDATION_FAILED',
+  })
+  async removeMember(
+    @Param('conversationId', ParseUUIDPipe) conversationId: Uuid,
+    @Param('userId', ParseUUIDPipe) userId: Uuid,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<void> {
+    await this.commandBus.execute<ConversationMemberDepartureCommand, void>(
+      new ConversationMemberDepartureCommand(
+        conversationId,
+        user.id,
+        userId,
+        'kick',
+      ),
+    );
   }
 
   @Get(':conversationId/members')

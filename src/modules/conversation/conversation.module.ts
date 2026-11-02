@@ -5,6 +5,7 @@ import { ConversationMemberModule } from 'modules/conversation-member/conversati
 import { MessageModule } from 'modules/message/message.module';
 import { ConversationCreateCommandHandler } from './application/commands/conversation-create/conversation-create.command.handler';
 import { ConversationMembersAddCommandHandler } from './application/commands/conversation-members-add/conversation-members-add.command.handler';
+import { ConversationMemberDepartureCommandHandler } from './application/commands/conversation-member-departure/conversation-member-departure.command.handler';
 import { ConversationListQueryHandler } from './application/queries/conversation-list/conversation-list.query.handler';
 import { ConversationGetDetailQueryHandler } from './application/queries/conversation-get-detail/conversation-get-detail.query.handler';
 import { IdentityConversationUserLookupService } from './infrastructure/services/identity-conversation-user-lookup.service';
@@ -19,6 +20,7 @@ import { ConversationController } from './presentation/http/controllers/conversa
 const commandHandlers = [
   ConversationCreateCommandHandler,
   ConversationMembersAddCommandHandler,
+  ConversationMemberDepartureCommandHandler,
 ];
 const queryHandlers = [
   ConversationListQueryHandler,

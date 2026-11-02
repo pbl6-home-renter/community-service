@@ -8,6 +8,7 @@ import { ConversationMemberEntity } from '../../domain/entities/conversation-mem
 import { ConversationMemberIdentity } from '../../domain/entities/conversation-member.props';
 import { ConversationMemberRepository } from '../../domain/repositories/conversation-member.repository';
 import { ConversationParticipantType } from '../../domain/enums/conversation-participant-type.enum';
+import { ConversationMemberStatus } from '../../domain/enums/conversation-member-status.enum';
 import { ConversationMemberMapper } from './mappers/conversation-member.mapper';
 import { ConversationMemberTypeormEntity } from './conversation-member.typeorm-entity';
 
@@ -91,6 +92,28 @@ export class TypeOrmConversationMemberRepository implements ConversationMemberRe
       lock: { mode: 'pessimistic_write' },
     });
     return raw ? ConversationMemberMapper.toDomain(raw) : null;
+  }
+
+  async findActiveUserMembersForUpdate(
+    conversationId: Uuid,
+    context: TransactionContext,
+  ): Promise<ConversationMemberEntity[]> {
+    const raw = await withTransaction(this.repository, context)
+      .createQueryBuilder('member')
+      .where('member.conversationId = :conversationId', { conversationId })
+      .andWhere('member.participantType = :participantType', {
+        participantType: ConversationParticipantType.USER,
+      })
+      .andWhere('member.status = :status', {
+        status: ConversationMemberStatus.ACTIVE,
+      })
+      .andWhere('member.isDeleted = false')
+      .orderBy('member.joinedAt', 'ASC')
+      .addOrderBy('member.createdAt', 'ASC')
+      .addOrderBy('member.id', 'ASC')
+      .setLock('pessimistic_write')
+      .getMany();
+    return raw.map(ConversationMemberMapper.toDomain);
   }
 
   async delete(id: Uuid, context?: TransactionContext): Promise<void> {

@@ -12,6 +12,7 @@ export class ConversationMemberEntity extends AggregateRoot {
   private _leftSequence: string | null;
   private _lastReadSequence: string;
   private _status: ConversationMemberStatus;
+  private _role: ConversationMemberRole;
 
   private constructor(
     id: Uuid,
@@ -20,7 +21,7 @@ export class ConversationMemberEntity extends AggregateRoot {
     readonly userId: Uuid | null,
     private _displayName: string,
     readonly systemParticipantKey: string | null,
-    readonly role: ConversationMemberRole,
+    role: ConversationMemberRole,
     status: ConversationMemberStatus,
     joinedAt: Date,
     leftAt: Date | null,
@@ -31,6 +32,7 @@ export class ConversationMemberEntity extends AggregateRoot {
     isDeleted: boolean,
   ) {
     super(id, createdAt, updatedAt, isDeleted);
+    this._role = role;
     this._status = status;
     this._joinedAt = joinedAt;
     this._leftAt = leftAt;
@@ -85,6 +87,10 @@ export class ConversationMemberEntity extends AggregateRoot {
     return this._status;
   }
 
+  get role(): ConversationMemberRole {
+    return this._role;
+  }
+
   get displayName(): string {
     return this._displayName;
   }
@@ -112,6 +118,19 @@ export class ConversationMemberEntity extends AggregateRoot {
     this._status = ConversationMemberStatus.READ_ONLY;
     this._leftAt = leftAt;
     this._leftSequence = leftSequence;
+  }
+
+  changeRole(role: ConversationMemberRole): void {
+    if (
+      this.participantType !== ConversationParticipantType.USER ||
+      this._status !== ConversationMemberStatus.ACTIVE ||
+      role === ConversationMemberRole.SYSTEM
+    ) {
+      throw new ValidationException(
+        'Only active user members can change between admin and member roles',
+      );
+    }
+    this._role = role;
   }
 
   reactivate(

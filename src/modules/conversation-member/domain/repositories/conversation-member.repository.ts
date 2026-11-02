@@ -20,4 +20,9 @@ export interface ConversationMemberRepository extends BaseRepository<Conversatio
     participant: ConversationMemberIdentity,
     context: TransactionContext,
   ): Promise<ConversationMemberEntity | null>;
+
+  findActiveUserMembersForUpdate(
+    conversationId: Uuid,
+    context: TransactionContext,
+  ): Promise<ConversationMemberEntity[]>;
 }
