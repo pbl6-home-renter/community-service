@@ -114,7 +114,7 @@ export class ApiConfigService {
     };
   }
   get serverPort(): number {
-    return getConfigNumber(this.configService, 'PORT', 3001);
+    return getConfigNumber(this.configService, 'PORT', 3004);
   }
   get enableSwagger(): boolean {
     return getConfigBoolean(this.configService, 'ENABLE_DOCUMENTATION', true);

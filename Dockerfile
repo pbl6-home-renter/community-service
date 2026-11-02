@@ -14,7 +14,7 @@ FROM node:24.18.0-slim AS runner
 WORKDIR /usr/src/app
 
 ENV NODE_ENV=production
-ARG PORT=3001
+ARG PORT=3004
 ENV PORT=$PORT
 
 COPY package*.json ./

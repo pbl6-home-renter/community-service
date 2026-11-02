@@ -102,11 +102,11 @@ npm run migration:run   # tạo bảng outbox/inbox và bảng của module
 npm run start:dev       # watch mode
 ```
 
-| Endpoint | URL (mặc định `PORT=3001`, `PATH=sample`) |
+| Endpoint | URL (mặc định `PORT=3004`, `PATH=community`) |
 |---|---|
-| Swagger UI | `http://localhost:3001/api/v1/sample/swagger` |
-| OpenAPI JSON | `http://localhost:3001/api/v1/sample/swagger/json` |
-| Health check | `GET http://localhost:3001/api/v1/sample/health` |
+| Swagger UI | `http://localhost:3004/api/v1/community/swagger` |
+| OpenAPI JSON | `http://localhost:3004/api/v1/community/swagger/json` |
+| Health check | `GET http://localhost:3004/api/v1/community/health` |
 | Sample API | `POST /api/v1/samples`, `GET /api/v1/samples/:id`, `DELETE /api/v1/samples/:id` |
 
 <details>
@@ -114,7 +114,7 @@ npm run start:dev       # watch mode
 
 ```bash
 docker build -t rentify-backend:local .
-docker run -p 3001:3001 --env-file .env rentify-backend:local
+docker run -p 3004:3004 --env-file .env rentify-backend:local
 ```
 
 Image dùng 3 stage (`builder` → `dependencies` → `runner`). Entrypoint [`start.sh`](start.sh) chạy `npm run migration:run:prod` (lỗi migration không chặn khởi động) rồi `node dist/main.js`.
@@ -289,7 +289,7 @@ diff -rq --strip-trailing-cr boilerplate/src/shared <Service>/src/shared   # ph�
 | Biến | Bắt buộc | Mô tả |
 |---|:---:|---|
 | **Ứng dụng** | | |
-| `PORT` | Không | Cổng HTTP, mặc định `3001` |
+| `PORT` | Không | Cổng HTTP, mặc định `3004` |
 | `APP_NAME` | Không | Tên ứng dụng, mặc định `MyApp`; dùng làm tiền tố exchange mặc định |
 | `NODE_ENV` | Không | `dev` / `production`; ảnh hưởng việc tự bật SSL DB |
 | `ENABLE_DOCUMENTATION` | Không | Bật Swagger, mặc định `true` |

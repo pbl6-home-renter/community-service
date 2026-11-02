@@ -9,15 +9,15 @@ export class ServiceConstants {
    * are served under `/api/v1/<PATH>/health` and `/api/v1/<PATH>/swagger`, so
    * the gateway can route them to the right service.
    */
-  static readonly PATH = 'sample';
+  static readonly PATH = 'community';
 
-  static readonly TITLE = 'NestJS Clean Architecture API';
+  static readonly TITLE = 'Rentify Community Service API';
 
   static readonly DESCRIPTION =
-    'Production-grade boilerplate using DDD, CQRS, and Clean Architecture';
+    'Chat and notification service for Rentify';
 
   /** Used when neither `DATABASE_URL` nor `DB_DATABASE` is set. */
-  static readonly DEFAULT_DATABASE_NAME = 'app_db';
+  static readonly DEFAULT_DATABASE_NAME = 'community_db';
 
   private constructor() {}
 }
