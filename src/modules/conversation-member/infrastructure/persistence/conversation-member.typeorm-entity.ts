@@ -4,10 +4,9 @@ import { AbstractEntity } from 'shared/infrastructure/database/abstract.typeorm-
 import { ConversationMemberRole } from '../../domain/enums/conversation-member-role.enum';
 import { ConversationMemberStatus } from '../../domain/enums/conversation-member-status.enum';
 import { ConversationParticipantType } from '../../domain/enums/conversation-participant-type.enum';
-import { ConversationTypeormEntity } from './conversation.typeorm-entity';
 
 @Entity('conversation_members')
-@ForeignKey(() => ConversationTypeormEntity, ['conversationId'], ['id'], {
+@ForeignKey('conversations', ['conversationId'], ['id'], {
   name: 'FK_conversation_members_conversation_id',
   onDelete: 'RESTRICT',
 })
