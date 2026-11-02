@@ -44,44 +44,51 @@ export class ConversationCreateCommandHandler implements ICommandHandler<
   async execute(
     command: ConversationCreateCommand,
   ): Promise<ConversationCreateResult> {
+    if (!Object.values(ConversationKind).includes(command.kind)) {
+      throw new ValidationException('Conversation kind is invalid');
+    }
+
     const requestedUserIds =
       command.kind === ConversationKind.DIRECT
         ? command.recipientUserId
-          ? [command.recipientUserId]
+          ? [command.callerUserId, command.recipientUserId]
           : []
-        : command.memberUserIds;
-    await this.ensureUsersExist(requestedUserIds);
+        : [command.callerUserId, ...command.memberUserIds];
+    const displayNames = await this.getDisplayNames(requestedUserIds);
 
     if (command.kind === ConversationKind.DIRECT) {
-      return this.createOrReopenDirect(command);
+      return this.createOrReopenDirect(command, displayNames);
     }
     if (command.kind === ConversationKind.GROUP) {
-      return this.createGroup(command);
+      return this.createGroup(command, displayNames);
     }
     throw new ValidationException('Conversation kind is invalid');
   }
 
-  private async ensureUsersExist(userIds: Uuid[]): Promise<void> {
+  private async getDisplayNames(userIds: Uuid[]): Promise<Map<string, string>> {
     const uniqueUserIds = [
       ...new Set(userIds.map((userId) => userId.toLowerCase())),
     ];
-    if (uniqueUserIds.length === 0) return;
+    if (uniqueUserIds.length === 0) return new Map();
 
-    const existingUserIds = await this.userLookup.findExistingUserIds(
+    const displayNames = await this.userLookup.findDisplayNames(
       uniqueUserIds as Uuid[],
     );
-    const missingUserIds = uniqueUserIds.filter(
-      (userId) => !existingUserIds.has(userId),
-    );
+    const missingUserIds = uniqueUserIds.filter((userId) => {
+      const displayName = displayNames.get(userId);
+      return !displayName || displayName.trim().length === 0;
+    });
     if (missingUserIds.length > 0) {
       throw new ValidationException(
-        `Unknown or deleted user IDs: ${missingUserIds.join(', ')}`,
+        'One or more users do not exist or are unavailable',
       );
     }
+    return displayNames;
   }
 
   private async createOrReopenDirect(
     command: ConversationCreateCommand,
+    displayNames: Map<string, string>,
   ): Promise<ConversationCreateResult> {
     const recipientUserId = command.recipientUserId;
     if (!recipientUserId) {
@@ -116,11 +123,13 @@ export class ConversationCreateCommandHandler implements ICommandHandler<
             this.createMember(
               conversation.id,
               command.callerUserId,
+              displayNames.get(command.callerUserId.toLowerCase())!,
               ConversationMemberRole.MEMBER,
             ),
             this.createMember(
               conversation.id,
               recipientUserId,
+              displayNames.get(recipientUserId.toLowerCase())!,
               ConversationMemberRole.MEMBER,
             ),
           ];
@@ -143,12 +152,14 @@ export class ConversationCreateCommandHandler implements ICommandHandler<
         const callerMember = await this.getOrReactivateMember(
           existing.id,
           command.callerUserId,
+          displayNames.get(command.callerUserId.toLowerCase())!,
           latestSequence,
           context,
         );
         const recipientMember = await this.getOrReactivateMember(
           existing.id,
           recipientUserId,
+          displayNames.get(recipientUserId.toLowerCase())!,
           latestSequence,
           context,
         );
@@ -173,7 +184,11 @@ export class ConversationCreateCommandHandler implements ICommandHandler<
         (error.driverError as { constraint?: string }).constraint ===
           'UQ_conversations_direct_pair_key'
       ) {
-        return this.resolveDirectAfterConflict(directPairKey, command);
+        return this.resolveDirectAfterConflict(
+          directPairKey,
+          command,
+          displayNames,
+        );
       }
       throw error;
     }
@@ -182,6 +197,7 @@ export class ConversationCreateCommandHandler implements ICommandHandler<
   private async resolveDirectAfterConflict(
     directPairKey: string,
     command: ConversationCreateCommand,
+    displayNames: Map<string, string>,
   ): Promise<ConversationCreateResult> {
     return this.unitOfWork.run(async (context) => {
       const conversation =
@@ -199,12 +215,14 @@ export class ConversationCreateCommandHandler implements ICommandHandler<
       const callerMember = await this.getOrReactivateMember(
         conversation.id,
         command.callerUserId,
+        displayNames.get(command.callerUserId.toLowerCase())!,
         latestSequence,
         context,
       );
       const recipientMember = await this.getOrReactivateMember(
         conversation.id,
         command.recipientUserId!,
+        displayNames.get(command.recipientUserId!.toLowerCase())!,
         latestSequence,
         context,
       );
@@ -224,6 +242,7 @@ export class ConversationCreateCommandHandler implements ICommandHandler<
 
   private async createGroup(
     command: ConversationCreateCommand,
+    displayNames: Map<string, string>,
   ): Promise<ConversationCreateResult> {
     return this.unitOfWork.run(async (context) => {
       const conversation = ConversationEntity.create({
@@ -240,6 +259,7 @@ export class ConversationCreateCommandHandler implements ICommandHandler<
         this.createMember(
           conversation.id,
           userId,
+          displayNames.get(userId.toLowerCase())!,
           userId.toLowerCase() === command.callerUserId.toLowerCase()
             ? ConversationMemberRole.ADMIN
             : ConversationMemberRole.MEMBER,
@@ -257,6 +277,7 @@ export class ConversationCreateCommandHandler implements ICommandHandler<
   private createMember(
     conversationId: Uuid,
     userId: Uuid,
+    displayName: string,
     role: ConversationMemberRole.ADMIN | ConversationMemberRole.MEMBER,
     lastReadSequence = '0',
   ): ConversationMemberEntity {
@@ -264,6 +285,7 @@ export class ConversationCreateCommandHandler implements ICommandHandler<
       conversationId,
       participantType: ConversationParticipantType.USER,
       userId,
+      displayName,
       role,
       joinedAt: new Date(),
       lastReadSequence,
@@ -273,6 +295,7 @@ export class ConversationCreateCommandHandler implements ICommandHandler<
   private async getOrReactivateMember(
     conversationId: Uuid,
     userId: Uuid,
+    displayName: string,
     latestSequence: string,
     context: TransactionContext,
   ): Promise<ConversationMemberEntity> {
@@ -289,6 +312,7 @@ export class ConversationCreateCommandHandler implements ICommandHandler<
       const member = this.createMember(
         conversationId,
         userId,
+        displayName,
         ConversationMemberRole.MEMBER,
         latestSequence,
       );
@@ -296,7 +320,7 @@ export class ConversationCreateCommandHandler implements ICommandHandler<
       return member;
     }
     if (existing.status === ConversationMemberStatus.READ_ONLY) {
-      existing.reactivate(new Date(), latestSequence);
+      existing.reactivate(new Date(), latestSequence, displayName);
       await this.members.save(existing, context);
       return (
         (await this.members.findByParticipantForUpdate(

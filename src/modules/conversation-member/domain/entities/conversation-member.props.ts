@@ -6,6 +6,7 @@ import { ConversationParticipantType } from '../enums/conversation-participant-t
 interface ConversationMemberBaseProps {
   id?: Uuid;
   conversationId: Uuid;
+  displayName: string;
   status?: ConversationMemberStatus;
   joinedAt?: Date;
   leftAt?: Date | null;

@@ -32,6 +32,9 @@ export class MessageTypeormEntity extends AbstractEntity {
   @Column({ type: 'uuid' })
   senderMemberId: Uuid;
 
+  @Column({ type: 'varchar', length: 254 })
+  senderNameSnapshot: string;
+
   @Column({ type: 'uuid', nullable: true })
   clientMessageId: Uuid | null;
 

@@ -9,6 +9,7 @@ export class MessageEntity extends AggregateRoot {
     id: Uuid,
     readonly conversationId: Uuid,
     readonly senderMemberId: Uuid,
+    readonly senderNameSnapshot: string,
     readonly clientMessageId: Uuid | null,
     readonly type: MessageType,
     readonly content: string | null,
@@ -29,11 +30,13 @@ export class MessageEntity extends AggregateRoot {
   static reconstitute(props: MessageProps): MessageEntity {
     MessageEntity.validateSequence(props.sequence);
     MessageEntity.validateType(props.type);
+    MessageEntity.validateSenderNameSnapshot(props.senderNameSnapshot);
 
     return new MessageEntity(
       props.id ?? generateUuid(),
       props.conversationId,
       props.senderMemberId,
+      props.senderNameSnapshot,
       props.clientMessageId ?? null,
       props.type,
       props.content ?? null,
@@ -49,6 +52,16 @@ export class MessageEntity extends AggregateRoot {
   private static validateType(type: MessageType): void {
     if (!Object.values(MessageType).includes(type)) {
       throw new ValidationException('Message type is invalid');
+    }
+  }
+
+  private static validateSenderNameSnapshot(senderNameSnapshot: string): void {
+    if (
+      typeof senderNameSnapshot !== 'string' ||
+      senderNameSnapshot.trim().length === 0 ||
+      senderNameSnapshot.length > 254
+    ) {
+      throw new ValidationException('Message sender name snapshot is invalid');
     }
   }
 

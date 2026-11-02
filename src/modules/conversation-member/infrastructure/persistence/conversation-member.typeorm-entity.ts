@@ -49,6 +49,9 @@ export class ConversationMemberTypeormEntity extends AbstractEntity {
   @Column({ type: 'uuid', nullable: true })
   userId: Uuid | null;
 
+  @Column({ type: 'varchar', length: 254 })
+  displayName: string;
+
   @Column({ type: 'varchar', length: 100, nullable: true })
   systemParticipantKey: string | null;
 

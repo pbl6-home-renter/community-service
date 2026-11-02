@@ -8,6 +8,7 @@ export class MessageMapper {
       id: raw.id,
       conversationId: raw.conversationId,
       senderMemberId: raw.senderMemberId,
+      senderNameSnapshot: raw.senderNameSnapshot,
       clientMessageId: raw.clientMessageId,
       type: raw.type as MessageType,
       content: raw.content,
@@ -25,6 +26,7 @@ export class MessageMapper {
     raw.id = entity.id;
     raw.conversationId = entity.conversationId;
     raw.senderMemberId = entity.senderMemberId;
+    raw.senderNameSnapshot = entity.senderNameSnapshot;
     raw.clientMessageId = entity.clientMessageId;
     raw.type = entity.type;
     raw.content = entity.content;

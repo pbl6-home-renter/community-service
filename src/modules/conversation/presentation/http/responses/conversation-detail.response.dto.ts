@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Uuid } from 'shared/domain/value-objects/uuid.vo';
-import { ConversationCreateResult } from 'modules/conversation/application/commands/conversation-create/conversation-create.result';
+import { ConversationDetailQueryResult } from 'modules/conversation/application/ports/conversation-detail-query.port';
 import { ConversationContextType } from 'modules/conversation/domain/enums/conversation-context-type.enum';
 import { ConversationKind } from 'modules/conversation/domain/enums/conversation-kind.enum';
 import { ConversationMemberResponseDto } from './conversation-member.response.dto';
@@ -31,7 +31,10 @@ export class ConversationDetailResponseDto {
   members: ConversationMemberResponseDto[];
 
   static fromResult(
-    result: ConversationCreateResult,
+    result: Pick<
+      ConversationDetailQueryResult,
+      'conversation' | 'members' | 'unreadCount'
+    >,
   ): ConversationDetailResponseDto {
     const response = new ConversationDetailResponseDto();
     response.id = result.conversation.id;

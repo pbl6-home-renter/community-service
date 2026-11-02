@@ -5,6 +5,7 @@ export interface MessageProps {
   id?: Uuid;
   conversationId: Uuid;
   senderMemberId: Uuid;
+  senderNameSnapshot: string;
   clientMessageId?: Uuid | null;
   type: MessageType;
   content?: string | null;
