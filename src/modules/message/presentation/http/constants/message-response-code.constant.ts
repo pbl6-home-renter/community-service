@@ -1,4 +1,5 @@
 export const MessageResponseCodeConstant = {
   MESSAGE_SENT: 'MESSAGE_SENT',
   MESSAGES_FETCHED: 'MESSAGES_FETCHED',
+  MESSAGES_MARKED_READ: 'MESSAGES_MARKED_READ',
 } as const;

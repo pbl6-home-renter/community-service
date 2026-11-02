@@ -5,6 +5,7 @@ import { ConversationMemberProps } from './conversation-member.props';
 import { ConversationMemberRole } from '../enums/conversation-member-role.enum';
 import { ConversationMemberStatus } from '../enums/conversation-member-status.enum';
 import { ConversationParticipantType } from '../enums/conversation-participant-type.enum';
+import { ConversationMemberReadCursorInvalidException } from '../exceptions/conversation-member-read-cursor-invalid.exception';
 
 export class ConversationMemberEntity extends AggregateRoot {
   private _joinedAt: Date;
@@ -118,6 +119,17 @@ export class ConversationMemberEntity extends AggregateRoot {
     this._status = ConversationMemberStatus.READ_ONLY;
     this._leftAt = leftAt;
     this._leftSequence = leftSequence;
+  }
+
+  markRead(sequence: string): boolean {
+    ConversationMemberEntity.validateSequence(sequence);
+    if (BigInt(sequence) < BigInt(this._lastReadSequence)) {
+      throw new ConversationMemberReadCursorInvalidException();
+    }
+    if (sequence === this._lastReadSequence) return false;
+
+    this._lastReadSequence = sequence;
+    return true;
   }
 
   changeRole(role: ConversationMemberRole): void {

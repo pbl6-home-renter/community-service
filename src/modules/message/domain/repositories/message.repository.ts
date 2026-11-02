@@ -24,9 +24,16 @@ export interface MessageRepository extends BaseRepository<MessageEntity> {
     context: TransactionContext,
   ): Promise<string>;
 
+  hasSequenceForConversation(
+    conversationId: Uuid,
+    sequence: string,
+    context: TransactionContext,
+  ): Promise<boolean>;
+
   countUnread(
     conversationId: Uuid,
     memberId: Uuid,
     afterSequence: string,
+    throughSequence?: string | null,
   ): Promise<number>;
 }
