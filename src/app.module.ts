@@ -4,19 +4,19 @@ import { LoggingExceptionFilter } from 'shared/presentation/http/filters/error-h
 import { ResponseTransformInterceptor } from 'shared/presentation/http/interceptors/response-transform.interceptor';
 import { SharedModule } from 'shared/shared.module';
 import { SecurityModule } from 'shared/security.module';
-import { SampleModule } from 'modules/sample/sample.module';
 import { HealthModule } from 'modules/health/health.module';
 import { OutboxModule } from 'modules/outbox/outbox.module';
 import { ConversationModule } from 'modules/conversation/conversation.module';
 import { ConversationMemberModule } from 'modules/conversation-member/conversation-member.module';
+import { MessageModule } from 'modules/message/message.module';
 
 @Module({
   imports: [
     SharedModule,
     SecurityModule,
-    SampleModule,
     ConversationModule,
     ConversationMemberModule,
+    MessageModule,
     OutboxModule,
     HealthModule,
   ],
