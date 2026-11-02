@@ -2,6 +2,7 @@ import { Check, Column, Entity, ForeignKey, Index } from 'typeorm';
 import { Uuid } from 'shared/domain/value-objects/uuid.vo';
 import { AbstractEntity } from 'shared/infrastructure/database/abstract.typeorm-entity';
 import { MessageType } from '../../domain/enums/message-type.enum';
+import { MessagePayload } from '../../domain/types/message-payload.type';
 
 @Entity('messages')
 @ForeignKey('conversations', ['conversationId'], ['id'], {
@@ -48,7 +49,7 @@ export class MessageTypeormEntity extends AbstractEntity {
   mediaId: Uuid | null;
 
   @Column({ type: 'jsonb', nullable: true })
-  payload: Record<string, unknown> | null;
+  payload: MessagePayload | null;
 
   @Column({ type: 'bigint' })
   sequence: string;

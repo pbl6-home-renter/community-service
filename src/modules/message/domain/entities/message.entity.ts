@@ -3,6 +3,7 @@ import { ValidationException } from 'shared/domain/exceptions/validation.excepti
 import { Uuid, generateUuid } from 'shared/domain/value-objects/uuid.vo';
 import { MessageProps } from './message.props';
 import { MessageType } from '../enums/message-type.enum';
+import { MessagePayload } from '../types/message-payload.type';
 
 export class MessageEntity extends AggregateRoot {
   private constructor(
@@ -14,7 +15,7 @@ export class MessageEntity extends AggregateRoot {
     readonly type: MessageType,
     readonly content: string | null,
     readonly mediaId: Uuid | null,
-    readonly payload: Record<string, unknown> | null,
+    readonly payload: MessagePayload | null,
     readonly sequence: string,
     createdAt: Date,
     updatedAt: Date,
