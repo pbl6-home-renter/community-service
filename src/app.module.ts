@@ -7,16 +7,12 @@ import { SecurityModule } from 'shared/security.module';
 import { HealthModule } from 'modules/health/health.module';
 import { OutboxModule } from 'modules/outbox/outbox.module';
 import { ConversationModule } from 'modules/conversation/conversation.module';
-import { ConversationMemberModule } from 'modules/conversation-member/conversation-member.module';
-import { MessageModule } from 'modules/message/message.module';
 
 @Module({
   imports: [
     SharedModule,
     SecurityModule,
     ConversationModule,
-    ConversationMemberModule,
-    MessageModule,
     OutboxModule,
     HealthModule,
   ],

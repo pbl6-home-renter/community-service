@@ -1,0 +1,311 @@
+import { Inject } from '@nestjs/common';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { QueryFailedError } from 'typeorm';
+import { CONVERSATION_MEMBER_DI_TOKEN } from 'modules/conversation-member/conversation-member.di-token';
+import { ConversationMemberEntity } from 'modules/conversation-member/domain/entities/conversation-member.entity';
+import { ConversationMemberRepository } from 'modules/conversation-member/domain/repositories/conversation-member.repository';
+import { ConversationMemberRole } from 'modules/conversation-member/domain/enums/conversation-member-role.enum';
+import { ConversationMemberStatus } from 'modules/conversation-member/domain/enums/conversation-member-status.enum';
+import { ConversationParticipantType } from 'modules/conversation-member/domain/enums/conversation-participant-type.enum';
+import { MESSAGE_DI_TOKEN } from 'modules/message/message.di-token';
+import { MessageRepository } from 'modules/message/domain/repositories/message.repository';
+import { UNIT_OF_WORK_DI_TOKEN } from 'shared/application/di-tokens';
+import { IUnitOfWork } from 'shared/application/ports/unit-of-work.port';
+import { ValidationException } from 'shared/domain/exceptions/validation.exception';
+import { TransactionContext } from 'shared/domain/repositories/transaction-context';
+import { Uuid } from 'shared/domain/value-objects/uuid.vo';
+import { PostgresErrorCode } from 'shared/infrastructure/database/postgres-error-code';
+import { ConversationEntity } from '../../../domain/entities/conversation.entity';
+import { ConversationKind } from '../../../domain/enums/conversation-kind.enum';
+import { ConversationRepository } from '../../../domain/repositories/conversation.repository';
+import { CONVERSATION_DI_TOKEN } from '../../../conversation.di-token';
+import { ConversationCreateCommand } from './conversation-create.command';
+import { ConversationCreateResult } from './conversation-create.result';
+import { ConversationUserLookup } from '../../ports/conversation-user-lookup.port';
+
+@CommandHandler(ConversationCreateCommand)
+export class ConversationCreateCommandHandler implements ICommandHandler<
+  ConversationCreateCommand,
+  ConversationCreateResult
+> {
+  constructor(
+    @Inject(CONVERSATION_DI_TOKEN.REPOSITORY)
+    private readonly conversations: ConversationRepository,
+    @Inject(CONVERSATION_MEMBER_DI_TOKEN.REPOSITORY)
+    private readonly members: ConversationMemberRepository,
+    @Inject(MESSAGE_DI_TOKEN.REPOSITORY)
+    private readonly messages: MessageRepository,
+    @Inject(UNIT_OF_WORK_DI_TOKEN)
+    private readonly unitOfWork: IUnitOfWork,
+    @Inject(CONVERSATION_DI_TOKEN.USER_LOOKUP)
+    private readonly userLookup: ConversationUserLookup,
+  ) {}
+
+  async execute(
+    command: ConversationCreateCommand,
+  ): Promise<ConversationCreateResult> {
+    const requestedUserIds =
+      command.kind === ConversationKind.DIRECT
+        ? command.recipientUserId
+          ? [command.recipientUserId]
+          : []
+        : command.memberUserIds;
+    await this.ensureUsersExist(requestedUserIds);
+
+    if (command.kind === ConversationKind.DIRECT) {
+      return this.createOrReopenDirect(command);
+    }
+    if (command.kind === ConversationKind.GROUP) {
+      return this.createGroup(command);
+    }
+    throw new ValidationException('Conversation kind is invalid');
+  }
+
+  private async ensureUsersExist(userIds: Uuid[]): Promise<void> {
+    const uniqueUserIds = [
+      ...new Set(userIds.map((userId) => userId.toLowerCase())),
+    ];
+    if (uniqueUserIds.length === 0) return;
+
+    const existingUserIds = await this.userLookup.findExistingUserIds(
+      uniqueUserIds as Uuid[],
+    );
+    const missingUserIds = uniqueUserIds.filter(
+      (userId) => !existingUserIds.has(userId),
+    );
+    if (missingUserIds.length > 0) {
+      throw new ValidationException(
+        `Unknown or deleted user IDs: ${missingUserIds.join(', ')}`,
+      );
+    }
+  }
+
+  private async createOrReopenDirect(
+    command: ConversationCreateCommand,
+  ): Promise<ConversationCreateResult> {
+    const recipientUserId = command.recipientUserId;
+    if (!recipientUserId) {
+      throw new ValidationException(
+        'Direct conversation requires a recipient user',
+      );
+    }
+    if (recipientUserId.toLowerCase() === command.callerUserId.toLowerCase()) {
+      throw new ValidationException(
+        'Direct conversation cannot target the caller',
+      );
+    }
+
+    const directPairKey = [command.callerUserId, recipientUserId]
+      .map((userId) => userId.toLowerCase())
+      .sort()
+      .join(':');
+
+    try {
+      return await this.unitOfWork.run(async (context) => {
+        const existing = await this.conversations.findByDirectPairKeyForUpdate(
+          directPairKey,
+          context,
+        );
+        if (!existing) {
+          const conversation = ConversationEntity.create({
+            kind: ConversationKind.DIRECT,
+            directPairKey,
+            createdByUserId: command.callerUserId,
+          });
+          const members = [
+            this.createMember(
+              conversation.id,
+              command.callerUserId,
+              ConversationMemberRole.MEMBER,
+            ),
+            this.createMember(
+              conversation.id,
+              recipientUserId,
+              ConversationMemberRole.MEMBER,
+            ),
+          ];
+          await this.conversations.save(conversation, context);
+          for (const member of members) {
+            await this.members.save(member, context);
+          }
+          return {
+            conversation,
+            members,
+            unreadCount: 0,
+            wasCreated: true,
+          };
+        }
+
+        const latestSequence = await this.messages.latestSequenceForUpdate(
+          existing.id,
+          context,
+        );
+        const callerMember = await this.getOrReactivateMember(
+          existing.id,
+          command.callerUserId,
+          latestSequence,
+          context,
+        );
+        const recipientMember = await this.getOrReactivateMember(
+          existing.id,
+          recipientUserId,
+          latestSequence,
+          context,
+        );
+        const unreadCount = await this.messages.countUnread(
+          existing.id,
+          callerMember.id,
+          callerMember.lastReadSequence,
+        );
+
+        return {
+          conversation: existing,
+          members: [callerMember, recipientMember],
+          unreadCount,
+          wasCreated: false,
+        };
+      });
+    } catch (error) {
+      if (
+        error instanceof QueryFailedError &&
+        (error.driverError as { code?: string }).code ===
+          PostgresErrorCode.UNIQUE_VIOLATION &&
+        (error.driverError as { constraint?: string }).constraint ===
+          'UQ_conversations_direct_pair_key'
+      ) {
+        return this.resolveDirectAfterConflict(directPairKey, command);
+      }
+      throw error;
+    }
+  }
+
+  private async resolveDirectAfterConflict(
+    directPairKey: string,
+    command: ConversationCreateCommand,
+  ): Promise<ConversationCreateResult> {
+    return this.unitOfWork.run(async (context) => {
+      const conversation =
+        await this.conversations.findByDirectPairKeyForUpdate(
+          directPairKey,
+          context,
+        );
+      if (!conversation)
+        throw new Error('Direct conversation conflict was not resolved');
+
+      const latestSequence = await this.messages.latestSequenceForUpdate(
+        conversation.id,
+        context,
+      );
+      const callerMember = await this.getOrReactivateMember(
+        conversation.id,
+        command.callerUserId,
+        latestSequence,
+        context,
+      );
+      const recipientMember = await this.getOrReactivateMember(
+        conversation.id,
+        command.recipientUserId!,
+        latestSequence,
+        context,
+      );
+      const unreadCount = await this.messages.countUnread(
+        conversation.id,
+        callerMember.id,
+        callerMember.lastReadSequence,
+      );
+      return {
+        conversation,
+        members: [callerMember, recipientMember],
+        unreadCount,
+        wasCreated: false,
+      };
+    });
+  }
+
+  private async createGroup(
+    command: ConversationCreateCommand,
+  ): Promise<ConversationCreateResult> {
+    return this.unitOfWork.run(async (context) => {
+      const conversation = ConversationEntity.create({
+        kind: ConversationKind.GROUP,
+        title: command.title,
+        createdByUserId: command.callerUserId,
+      });
+      const uniqueUserIds = new Map<string, Uuid>();
+      for (const userId of [command.callerUserId, ...command.memberUserIds]) {
+        const normalizedUserId = userId.toLowerCase();
+        uniqueUserIds.set(normalizedUserId, normalizedUserId as Uuid);
+      }
+      const members = [...uniqueUserIds.values()].map((userId) =>
+        this.createMember(
+          conversation.id,
+          userId,
+          userId.toLowerCase() === command.callerUserId.toLowerCase()
+            ? ConversationMemberRole.ADMIN
+            : ConversationMemberRole.MEMBER,
+        ),
+      );
+
+      await this.conversations.save(conversation, context);
+      for (const member of members) {
+        await this.members.save(member, context);
+      }
+      return { conversation, members, unreadCount: 0, wasCreated: true };
+    });
+  }
+
+  private createMember(
+    conversationId: Uuid,
+    userId: Uuid,
+    role: ConversationMemberRole.ADMIN | ConversationMemberRole.MEMBER,
+    lastReadSequence = '0',
+  ): ConversationMemberEntity {
+    return ConversationMemberEntity.create({
+      conversationId,
+      participantType: ConversationParticipantType.USER,
+      userId,
+      role,
+      joinedAt: new Date(),
+      lastReadSequence,
+    });
+  }
+
+  private async getOrReactivateMember(
+    conversationId: Uuid,
+    userId: Uuid,
+    latestSequence: string,
+    context: TransactionContext,
+  ): Promise<ConversationMemberEntity> {
+    const identity = {
+      participantType: ConversationParticipantType.USER,
+      userId,
+    } as const;
+    const existing = await this.members.findByParticipantForUpdate(
+      conversationId,
+      identity,
+      context,
+    );
+    if (!existing) {
+      const member = this.createMember(
+        conversationId,
+        userId,
+        ConversationMemberRole.MEMBER,
+        latestSequence,
+      );
+      await this.members.save(member, context);
+      return member;
+    }
+    if (existing.status === ConversationMemberStatus.READ_ONLY) {
+      existing.reactivate(new Date(), latestSequence);
+      await this.members.save(existing, context);
+      return (
+        (await this.members.findByParticipantForUpdate(
+          conversationId,
+          identity,
+          context,
+        )) ?? existing
+      );
+    }
+    return existing;
+  }
+}

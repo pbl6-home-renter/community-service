@@ -1,0 +1,4 @@
+export const ConversationResponseCodeConstant = {
+  CONVERSATION_CREATED: 'CONVERSATION_CREATED',
+  CONVERSATION_REOPENED: 'CONVERSATION_REOPENED',
+} as const;

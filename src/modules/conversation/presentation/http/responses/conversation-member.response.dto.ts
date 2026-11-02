@@ -1,0 +1,69 @@
+import { ApiProperty } from '@nestjs/swagger';
+import { Uuid } from 'shared/domain/value-objects/uuid.vo';
+import { ConversationMemberEntity } from 'modules/conversation-member/domain/entities/conversation-member.entity';
+import { ConversationMemberRole } from 'modules/conversation-member/domain/enums/conversation-member-role.enum';
+import { ConversationMemberStatus } from 'modules/conversation-member/domain/enums/conversation-member-status.enum';
+import { ConversationParticipantType } from 'modules/conversation-member/domain/enums/conversation-participant-type.enum';
+
+export class ConversationMemberResponseDto {
+  @ApiProperty({ format: 'uuid' })
+  id: Uuid;
+
+  @ApiProperty({ format: 'uuid' })
+  conversationId: Uuid;
+
+  @ApiProperty({ format: 'uuid', nullable: true })
+  userId: Uuid | null;
+
+  @ApiProperty({ enum: ConversationParticipantType })
+  participantType: ConversationParticipantType;
+
+  @ApiProperty({ enum: ConversationMemberRole })
+  role: ConversationMemberRole;
+
+  @ApiProperty({ enum: ConversationMemberStatus })
+  status: ConversationMemberStatus;
+
+  @ApiProperty({ format: 'date-time' })
+  joinedAt: Date;
+
+  @ApiProperty({ format: 'date-time', nullable: true })
+  leftAt: Date | null;
+
+  @ApiProperty({ type: Number, format: 'int64', nullable: true })
+  leftSequence: number | null;
+
+  @ApiProperty({ type: Number, format: 'int64', minimum: 0 })
+  lastReadSequence: number;
+
+  @ApiProperty({ format: 'date-time' })
+  createdAt: Date;
+
+  @ApiProperty({ format: 'date-time' })
+  updatedAt: Date;
+
+  @ApiProperty()
+  isDeleted: boolean;
+
+  static fromDomain(
+    member: ConversationMemberEntity,
+  ): ConversationMemberResponseDto {
+    const response = new ConversationMemberResponseDto();
+    response.id = member.id;
+    response.conversationId = member.conversationId;
+    response.userId = member.userId;
+    response.participantType = member.participantType;
+    response.role = member.role;
+    response.status = member.status;
+    response.joinedAt = member.joinedAt;
+    response.leftAt = member.leftAt;
+    response.leftSequence = member.leftSequence
+      ? Number(member.leftSequence)
+      : null;
+    response.lastReadSequence = Number(member.lastReadSequence);
+    response.createdAt = member.createdAt;
+    response.updatedAt = member.updatedAt;
+    response.isDeleted = member.isDeleted;
+    return response;
+  }
+}
