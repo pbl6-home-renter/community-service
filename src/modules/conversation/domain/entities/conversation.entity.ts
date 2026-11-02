@@ -1,0 +1,59 @@
+import { AggregateRoot } from 'shared/domain/base/aggregate-root';
+import { Uuid, generateUuid } from 'shared/domain/value-objects/uuid.vo';
+import { ConversationContextType } from '../enums/conversation-context-type.enum';
+import { ConversationKind } from '../enums/conversation-kind.enum';
+import { ConversationTitle } from '../value-objects/conversation-title.vo';
+import { ConversationProps } from './conversation.props';
+
+export class ConversationEntity extends AggregateRoot {
+  private constructor(
+    id: Uuid,
+    readonly kind: ConversationKind,
+    readonly contextType: ConversationContextType | null,
+    readonly contextId: Uuid | null,
+    readonly directPairKey: string | null,
+    readonly title: ConversationTitle | null,
+    readonly avatarMediaId: Uuid | null,
+    readonly createdByUserId: Uuid | null,
+    createdAt: Date,
+    updatedAt: Date,
+    isDeleted: boolean,
+  ) {
+    super(id, createdAt, updatedAt, isDeleted);
+  }
+
+  static create(props: ConversationProps): ConversationEntity {
+    return ConversationEntity.reconstitute(props);
+  }
+
+  static reconstitute(props: ConversationProps): ConversationEntity {
+    const contextType = props.contextType ?? null;
+    const contextId = props.contextId ?? null;
+    const directPairKey = props.directPairKey ?? null;
+
+    if ((contextType === null) !== (contextId === null)) {
+      throw new Error('Conversation context type and ID must be set together');
+    }
+
+    if (
+      (props.kind === ConversationKind.DIRECT && directPairKey === null) ||
+      (props.kind === ConversationKind.GROUP && directPairKey !== null)
+    ) {
+      throw new Error('Conversation kind and direct pair key do not match');
+    }
+
+    return new ConversationEntity(
+      props.id ?? generateUuid(),
+      props.kind,
+      contextType,
+      contextId,
+      directPairKey,
+      props.title ?? null,
+      props.avatarMediaId ?? null,
+      props.createdByUserId ?? null,
+      props.createdAt ?? new Date(),
+      props.updatedAt ?? new Date(),
+      props.isDeleted ?? false,
+    );
+  }
+}
