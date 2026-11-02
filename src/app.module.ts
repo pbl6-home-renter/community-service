@@ -7,12 +7,18 @@ import { SecurityModule } from 'shared/security.module';
 import { HealthModule } from 'modules/health/health.module';
 import { OutboxModule } from 'modules/outbox/outbox.module';
 import { ConversationModule } from 'modules/conversation/conversation.module';
+import { NotificationModule } from 'modules/notification/notification.module';
+import { NotificationPreferenceModule } from 'modules/notification-preference/notification-preference.module';
+import { PushDeviceModule } from 'modules/push-device/push-device.module';
 
 @Module({
   imports: [
     SharedModule,
     SecurityModule,
     ConversationModule,
+    NotificationModule,
+    NotificationPreferenceModule,
+    PushDeviceModule,
     OutboxModule,
     HealthModule,
   ],
