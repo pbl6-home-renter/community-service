@@ -1,0 +1,3 @@
+export const CONVERSATION_DI_TOKEN = {
+  REPOSITORY: Symbol('CONVERSATION_REPOSITORY'),
+} as const;
