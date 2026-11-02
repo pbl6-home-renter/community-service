@@ -15,6 +15,9 @@ export class ConversationMemberResponseDto {
   @ApiProperty({ format: 'uuid', nullable: true })
   userId: Uuid | null;
 
+  @ApiProperty({ maxLength: 254 })
+  displayName: string;
+
   @ApiProperty({ enum: ConversationParticipantType })
   participantType: ConversationParticipantType;
 
@@ -52,6 +55,7 @@ export class ConversationMemberResponseDto {
     response.id = member.id;
     response.conversationId = member.conversationId;
     response.userId = member.userId;
+    response.displayName = member.displayName;
     response.participantType = member.participantType;
     response.role = member.role;
     response.status = member.status;

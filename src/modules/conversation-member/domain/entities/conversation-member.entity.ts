@@ -18,6 +18,7 @@ export class ConversationMemberEntity extends AggregateRoot {
     readonly conversationId: Uuid,
     readonly participantType: ConversationParticipantType,
     readonly userId: Uuid | null,
+    private _displayName: string,
     readonly systemParticipantKey: string | null,
     readonly role: ConversationMemberRole,
     status: ConversationMemberStatus,
@@ -44,6 +45,7 @@ export class ConversationMemberEntity extends AggregateRoot {
   static reconstitute(
     props: ConversationMemberProps,
   ): ConversationMemberEntity {
+    ConversationMemberEntity.validateDisplayName(props.displayName);
     const status = props.status ?? ConversationMemberStatus.ACTIVE;
     const leftAt = props.leftAt ?? null;
     const leftSequence = props.leftSequence ?? null;
@@ -63,6 +65,7 @@ export class ConversationMemberEntity extends AggregateRoot {
       props.participantType === ConversationParticipantType.USER
         ? props.userId
         : null,
+      props.displayName,
       props.participantType === ConversationParticipantType.SYSTEM
         ? props.systemParticipantKey
         : null,
@@ -80,6 +83,10 @@ export class ConversationMemberEntity extends AggregateRoot {
 
   get status(): ConversationMemberStatus {
     return this._status;
+  }
+
+  get displayName(): string {
+    return this._displayName;
   }
 
   get joinedAt(): Date {
@@ -107,15 +114,21 @@ export class ConversationMemberEntity extends AggregateRoot {
     this._leftSequence = leftSequence;
   }
 
-  reactivate(joinedAt: Date, latestSequence: string): void {
+  reactivate(
+    joinedAt: Date,
+    latestSequence: string,
+    displayName: string,
+  ): void {
     if (this._status === ConversationMemberStatus.ACTIVE) return;
 
+    ConversationMemberEntity.validateDisplayName(displayName);
     ConversationMemberEntity.validateSequence(latestSequence);
     this._status = ConversationMemberStatus.ACTIVE;
     this._joinedAt = joinedAt;
     this._leftAt = null;
     this._leftSequence = null;
     this._lastReadSequence = latestSequence;
+    this._displayName = displayName;
   }
 
   private static validateState(
@@ -152,6 +165,18 @@ export class ConversationMemberEntity extends AggregateRoot {
     if (BigInt(sequence) > 9223372036854775807n) {
       throw new ValidationException(
         'Conversation member sequence exceeds the supported range',
+      );
+    }
+  }
+
+  private static validateDisplayName(displayName: string): void {
+    if (
+      typeof displayName !== 'string' ||
+      displayName.trim().length === 0 ||
+      displayName.length > 254
+    ) {
+      throw new ValidationException(
+        'Conversation member display name is invalid',
       );
     }
   }

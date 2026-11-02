@@ -26,6 +26,7 @@ export class ConversationMemberMapper {
       ...participantProps,
       id: raw.id,
       conversationId: raw.conversationId,
+      displayName: raw.displayName,
       status: raw.status,
       joinedAt: raw.joinedAt,
       leftAt: raw.leftAt,
@@ -45,6 +46,7 @@ export class ConversationMemberMapper {
     raw.conversationId = entity.conversationId;
     raw.participantType = entity.participantType;
     raw.userId = entity.userId;
+    raw.displayName = entity.displayName;
     raw.systemParticipantKey = entity.systemParticipantKey;
     raw.role = entity.role;
     raw.status = entity.status;

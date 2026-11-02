@@ -4,10 +4,14 @@ import { PeerService } from 'shared/application/http/peer-service.enum';
 import { IInternalHttpClient } from 'shared/application/ports/internal-http-client.port';
 import { Uuid } from 'shared/domain/value-objects/uuid.vo';
 import { ConversationUserLookup } from '../../application/ports/conversation-user-lookup.port';
-import { IDENTITY_ROUTES } from '../constants/identity-routes.constant';
+import {
+  IDENTITY_ROUTES,
+  IDENTITY_USER_LOOKUP_BATCH_SIZE,
+} from '../constants/identity-routes.constant';
 
 interface IdentityUserSummary {
   id: Uuid;
+  name: string;
   isDeleted: boolean;
 }
 
@@ -18,19 +22,28 @@ export class IdentityConversationUserLookupService implements ConversationUserLo
     private readonly internalHttpClient: IInternalHttpClient,
   ) {}
 
-  async findExistingUserIds(userIds: Uuid[]): Promise<Set<string>> {
-    if (userIds.length === 0) return new Set();
-
-    const users = await this.internalHttpClient.get<IdentityUserSummary[]>(
-      PeerService.IDENTITY,
-      IDENTITY_ROUTES.USERS,
-      { query: { ids: userIds.join(',') } },
-    );
-
-    return new Set(
-      users
-        .filter((user) => !user.isDeleted)
-        .map((user) => user.id.toLowerCase()),
-    );
+  async findDisplayNames(userIds: Uuid[]): Promise<Map<string, string>> {
+    const displayNames = new Map<string, string>();
+    for (
+      let index = 0;
+      index < userIds.length;
+      index += IDENTITY_USER_LOOKUP_BATCH_SIZE
+    ) {
+      const batch = userIds.slice(
+        index,
+        index + IDENTITY_USER_LOOKUP_BATCH_SIZE,
+      );
+      const users = await this.internalHttpClient.get<IdentityUserSummary[]>(
+        PeerService.IDENTITY,
+        IDENTITY_ROUTES.USERS,
+        { query: { ids: batch.join(',') } },
+      );
+      for (const user of users) {
+        if (!user.isDeleted) {
+          displayNames.set(user.id.toLowerCase(), user.name);
+        }
+      }
+    }
+    return displayNames;
   }
 }
