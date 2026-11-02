@@ -43,9 +43,25 @@ export interface MemberRoleChangedMessagePayloadData {
   newRole: ConversationMemberRoleValue;
 }
 
+export interface ConversationTitleChangedMessagePayloadData {
+  action: 'conversation_title_changed';
+  actorUserId: Uuid;
+  oldTitle: string | null;
+  newTitle: string | null;
+}
+
+export interface ConversationAvatarChangedMessagePayloadData {
+  action: 'conversation_avatar_changed';
+  actorUserId: Uuid;
+  oldAvatarMediaId: Uuid | null;
+  newAvatarMediaId: Uuid | null;
+}
+
 export type MessagePayload =
   | MembersAddedMessagePayloadData
   | MemberKickedMessagePayloadData
   | MemberLeftMessagePayloadData
   | AdminTransferredMessagePayloadData
-  | MemberRoleChangedMessagePayloadData;
+  | MemberRoleChangedMessagePayloadData
+  | ConversationTitleChangedMessagePayloadData
+  | ConversationAvatarChangedMessagePayloadData;
