@@ -43,9 +43,9 @@ export class NotificationRequestedSubscriber {
   async handle(event: IntegrationEvent): Promise<void> {
     NotificationRequestedEventValidator.assert(event);
     const notifications = await this.handleOnce(event);
-    await Promise.all(
-      notifications.map((notification) => this.delivery.deliver(notification)),
-    );
+    // Best-effort and off the ack path: the inbox row is the source of truth,
+    // so a lost push only means the user sees it next time they open the list.
+    void this.delivery.deliver(notifications);
   }
 
   private handleOnce(

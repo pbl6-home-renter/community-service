@@ -20,6 +20,7 @@ import { Uuid } from 'shared/domain/value-objects/uuid.vo';
 import { ApiSuccessResponse } from 'shared/presentation/decorators/api-success-response.decorator';
 import { CurrentUser } from 'shared/presentation/decorators/auth/current-user.decorator';
 import { ResponseCode } from 'shared/presentation/decorators/response-code.decorator';
+import { PushDeviceResponseCodeConstant } from '../constants/push-device-response-code.constant';
 import { PushDeviceRegisterCommand } from '../../../application/commands/push-device-register.command';
 import { PushDeviceRevokeCommand } from '../../../application/commands/push-device-revoke.command';
 import { PushDeviceEntity } from '../../../domain/entities/push-device.entity';
@@ -34,13 +35,13 @@ export class PushDeviceController {
 
   @Post()
   @HttpCode(HttpStatus.OK)
-  @ResponseCode('PUSH_DEVICE_REGISTERED')
+  @ResponseCode(PushDeviceResponseCodeConstant.PUSH_DEVICE_REGISTERED)
   @ApiOperation({
     operationId: 'postMePushDevices',
     summary: 'Register or refresh Android push device',
   })
   @ApiSuccessResponse({
-    code: 'PUSH_DEVICE_REGISTERED',
+    code: PushDeviceResponseCodeConstant.PUSH_DEVICE_REGISTERED,
     dataDto: PushDeviceRegisterResponseDto,
   })
   async register(

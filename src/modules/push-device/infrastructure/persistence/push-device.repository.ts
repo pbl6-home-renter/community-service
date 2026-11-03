@@ -4,6 +4,7 @@ import { IsNull, Repository } from 'typeorm';
 import { TransactionContext } from 'shared/domain/repositories/transaction-context';
 import { Uuid } from 'shared/domain/value-objects/uuid.vo';
 import { withTransaction } from 'shared/infrastructure/database/transaction/typeorm-transaction-context';
+import { PushDeviceMapper } from './mappers/push-device.mapper';
 import { PushDeviceEntity } from '../../domain/entities/push-device.entity';
 import { PushPlatform } from '../../domain/enums/push-platform.enum';
 import { PushDeviceRepository } from '../../domain/repositories/push-device.repository';
@@ -35,17 +36,7 @@ export class TypeOrmPushDeviceRepository implements PushDeviceRepository {
       { conflictPaths: ['token'], skipUpdateIfNoValuesChanged: false },
     );
     const record = await repository.findOneByOrFail({ token });
-    return PushDeviceEntity.reconstitute({
-      id: record.id,
-      userId: record.userId,
-      token: record.token,
-      platform: record.platform,
-      lastSeenAt: record.lastSeenAt,
-      revokedAt: record.revokedAt,
-      createdAt: record.createdAt,
-      updatedAt: record.updatedAt,
-      isDeleted: record.isDeleted,
-    });
+    return PushDeviceMapper.toDomain(record);
   }
   async revoke(
     userId: Uuid,
