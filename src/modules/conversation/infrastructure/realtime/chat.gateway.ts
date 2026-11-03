@@ -9,6 +9,10 @@ import { decodeJwt } from 'jose';
 import { Server, type Socket } from 'socket.io';
 import { ConversationSocketAccessService } from '../../application/queries/conversation-socket-access.service';
 import { ChatRealtimePort } from '../../application/ports/chat-realtime.port';
+import {
+  NotificationRealtimePort,
+  RealtimeNotification,
+} from 'modules/notification/application/ports/notification-realtime.port';
 import { AccessTokenVerifier } from 'shared/infrastructure/security/access-token-verifier.service';
 import { isValidUuid, Uuid } from 'shared/domain/value-objects/uuid.vo';
 import { UserStatus } from 'shared/domain/enums/user-status.enum';
@@ -29,7 +33,11 @@ interface JoinResult {
 
 @Injectable()
 export class ChatGateway
-  implements OnModuleInit, OnModuleDestroy, ChatRealtimePort
+  implements
+    OnModuleInit,
+    OnModuleDestroy,
+    ChatRealtimePort,
+    NotificationRealtimePort
 {
   private server: Server;
   private readonly logger = new Logger(ChatGateway.name);
@@ -202,5 +210,23 @@ export class ChatGateway
     this.server
       ?.to(userRoom(userId))
       .emit('conversation:available', { conversationId });
+  }
+
+  notificationCreated(userId: Uuid, notification: RealtimeNotification): void {
+    this.server
+      ?.to(userRoom(userId))
+      .emit('notification.created', notification);
+  }
+
+  notificationReadStateUpdated(
+    userId: Uuid,
+    notificationId: Uuid | null,
+    readAt: Date,
+  ): void {
+    this.server?.to(userRoom(userId)).emit('notification.read-state.updated', {
+      notificationId,
+      readAt,
+      all: notificationId === null,
+    });
   }
 }

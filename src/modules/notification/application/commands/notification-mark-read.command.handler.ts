@@ -7,6 +7,7 @@ import { NotificationNotFoundException } from '../../domain/exceptions/notificat
 import { NotificationRepository } from '../../domain/repositories/notification.repository';
 import { NOTIFICATION_DI_TOKEN } from '../../notification.di-token';
 import { NotificationMarkReadCommand } from './notification-mark-read.command';
+import { NotificationRealtimePort } from '../ports/notification-realtime.port';
 
 @CommandHandler(NotificationMarkReadCommand)
 export class NotificationMarkReadCommandHandler implements ICommandHandler<
@@ -17,20 +18,33 @@ export class NotificationMarkReadCommandHandler implements ICommandHandler<
     @Inject(NOTIFICATION_DI_TOKEN.REPOSITORY)
     private readonly notifications: NotificationRepository,
     @Inject(UNIT_OF_WORK_DI_TOKEN) private readonly unitOfWork: IUnitOfWork,
+    @Inject(NOTIFICATION_DI_TOKEN.REALTIME)
+    private readonly realtime: NotificationRealtimePort,
   ) {}
-  execute(command: NotificationMarkReadCommand): Promise<NotificationEntity> {
-    return this.unitOfWork.run(async (context) => {
+  async execute(
+    command: NotificationMarkReadCommand,
+  ): Promise<NotificationEntity> {
+    const result = await this.unitOfWork.run(async (context) => {
       const notification = await this.notifications.findByIdForUpdate(
         command.notificationId,
         context,
       );
       if (!notification || notification.recipientUserId !== command.userId)
         throw new NotificationNotFoundException();
+      const changed = !notification.readAt;
       if (!notification.readAt) {
         notification.markRead(new Date());
         await this.notifications.save(notification, context);
       }
-      return notification;
+      return { notification, changed };
     });
+    if (result.changed && result.notification.readAt) {
+      this.realtime.notificationReadStateUpdated(
+        command.userId,
+        result.notification.id,
+        result.notification.readAt,
+      );
+    }
+    return result.notification;
   }
 }

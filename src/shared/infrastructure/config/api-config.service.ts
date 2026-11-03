@@ -10,6 +10,7 @@ import { OutboxConfig } from 'shared/application/messaging/outbox.config';
 import { RabbitMqConfig } from './rabbitmq.config';
 import { AuthConfig } from './auth.config';
 import { PeerServicesConfig } from './peer-services.config';
+import { FcmConfig } from './fcm.config';
 
 @Injectable()
 export class ApiConfigService {
@@ -159,6 +160,14 @@ export class ApiConfigService {
         'INTERNAL_HTTP_TIMEOUT_MS',
         3000,
       ),
+    };
+  }
+
+  get fcm(): FcmConfig {
+    return {
+      projectId: getConfigString(this.configService, 'FCM_PROJECT_ID', ''),
+      clientEmail: getConfigString(this.configService, 'FCM_CLIENT_EMAIL', ''),
+      privateKey: getConfigString(this.configService, 'FCM_PRIVATE_KEY', ''),
     };
   }
 }

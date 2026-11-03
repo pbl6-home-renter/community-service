@@ -18,6 +18,7 @@ import { MESSAGE_DI_TOKEN } from '../../../message.di-token';
 import { ConversationForbiddenException } from 'modules/conversation/domain/exceptions/conversation-forbidden.exception';
 import { MessageConversationNotFoundException } from '../../../domain/exceptions/message-conversation-not-found.exception';
 import { ChatRealtimePort } from 'modules/conversation/application/ports/chat-realtime.port';
+import { ChatMessagePushNotifier } from '../../services/chat-message-push-notifier';
 
 @CommandHandler(MessageSendCommand)
 export class MessageSendCommandHandler implements ICommandHandler<
@@ -37,6 +38,7 @@ export class MessageSendCommandHandler implements ICommandHandler<
     private readonly unitOfWork: IUnitOfWork,
     @Inject(CONVERSATION_DI_TOKEN.CHAT_REALTIME)
     private readonly realtime: ChatRealtimePort,
+    private readonly chatMessagePushNotifier: ChatMessagePushNotifier,
   ) {}
 
   async execute(command: MessageSendCommand): Promise<MessageEntity> {
@@ -67,7 +69,6 @@ export class MessageSendCommandHandler implements ICommandHandler<
       );
     }
 
-    let createdMessage: MessageEntity | null = null;
     const result = await this.unitOfWork.run(async (context) => {
       const conversation = await this.conversations.findByIdForUpdate(
         command.conversationId,
@@ -91,7 +92,7 @@ export class MessageSendCommandHandler implements ICommandHandler<
         member.id,
         command.clientMessageId,
       );
-      if (existing) return existing;
+      if (existing) return { message: existing, created: false };
 
       const sequence = await this.messages.nextSequenceForUpdate(
         command.conversationId,
@@ -108,12 +109,17 @@ export class MessageSendCommandHandler implements ICommandHandler<
         sequence,
       });
       await this.messages.save(message, context);
-      createdMessage = message;
-      return message;
+      return { message, created: true };
     });
-    if (createdMessage)
+    if (result.created) {
+      const createdMessage = result.message;
       this.realtime.messageCreated(createdMessage, command.senderUserId);
-    return result;
+      void this.chatMessagePushNotifier.notify(
+        createdMessage,
+        command.senderUserId,
+      );
+    }
+    return result.message;
   }
 
   private validateContent(command: MessageSendCommand): void {

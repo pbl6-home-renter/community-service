@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { TransactionContext } from 'shared/domain/repositories/transaction-context';
 import { Uuid, generateUuid } from 'shared/domain/value-objects/uuid.vo';
 import { withTransaction } from 'shared/infrastructure/database/transaction/typeorm-transaction-context';
@@ -18,6 +18,25 @@ export class TypeOrmNotificationPreferenceRepository implements NotificationPref
   async findByUserId(userId: Uuid): Promise<NotificationPreferenceEntity[]> {
     const records = await this.repository.find({
       where: { userId, isDeleted: false },
+    });
+    return records.map((record) =>
+      NotificationPreferenceEntity.reconstitute({
+        id: record.id,
+        userId: record.userId,
+        category: record.category,
+        pushEnabled: record.pushEnabled,
+        createdAt: record.createdAt,
+        updatedAt: record.updatedAt,
+        isDeleted: record.isDeleted,
+      }),
+    );
+  }
+  async findByUserIds(
+    userIds: Uuid[],
+  ): Promise<NotificationPreferenceEntity[]> {
+    if (userIds.length === 0) return [];
+    const records = await this.repository.find({
+      where: { userId: In(userIds), isDeleted: false },
     });
     return records.map((record) =>
       NotificationPreferenceEntity.reconstitute({
