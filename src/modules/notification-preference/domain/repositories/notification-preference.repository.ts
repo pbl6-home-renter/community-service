@@ -5,6 +5,7 @@ import { NotificationPreferenceEntity } from '../entities/notification-preferenc
 
 export interface NotificationPreferenceRepository {
   findByUserId(userId: Uuid): Promise<NotificationPreferenceEntity[]>;
+  findByUserIds(userIds: Uuid[]): Promise<NotificationPreferenceEntity[]>;
   replaceAll(
     userId: Uuid,
     values: Record<NotificationCategory, boolean>,

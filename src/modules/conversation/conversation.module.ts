@@ -33,6 +33,8 @@ import { IdentityConversationAvatarValidatorService } from './infrastructure/ser
 import { SecurityModule } from 'shared/security.module';
 import { ConversationSocketAccessService } from './application/queries/conversation-socket-access.service';
 import { ChatGateway } from './infrastructure/realtime/chat.gateway';
+import { PushDeviceModule } from 'modules/push-device/push-device.module';
+import { ChatMessagePushNotifier } from 'modules/message/application/services/chat-message-push-notifier';
 
 const commandHandlers = [
   ConversationCreateCommandHandler,
@@ -56,6 +58,7 @@ const queryHandlers = [
     SecurityModule,
     ConversationMemberModule,
     MessageModule,
+    PushDeviceModule,
     TypeOrmModule.forFeature([
       ConversationTypeormEntity,
       ConversationMemberTypeormEntity,
@@ -71,6 +74,7 @@ const queryHandlers = [
     ...commandHandlers,
     ...queryHandlers,
     ConversationSocketAccessService,
+    ChatMessagePushNotifier,
     ChatGateway,
     TypeOrmConversationDetailQuery,
     TypeOrmConversationPageQuery,
@@ -115,6 +119,10 @@ const queryHandlers = [
       useExisting: IdentityConversationAvatarValidatorService,
     },
   ],
-  exports: [CONVERSATION_DI_TOKEN.REPOSITORY],
+  exports: [
+    CONVERSATION_DI_TOKEN.REPOSITORY,
+    CONVERSATION_DI_TOKEN.CHAT_REALTIME,
+    ChatGateway,
+  ],
 })
 export class ConversationModule {}

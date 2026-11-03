@@ -116,6 +116,21 @@ export class TypeOrmConversationMemberRepository implements ConversationMemberRe
     return raw.map(ConversationMemberMapper.toDomain);
   }
 
+  async findActiveUserMembers(
+    conversationId: Uuid,
+  ): Promise<ConversationMemberEntity[]> {
+    const raw = await this.repository.find({
+      where: {
+        conversationId,
+        participantType: ConversationParticipantType.USER,
+        status: ConversationMemberStatus.ACTIVE,
+        isDeleted: false,
+      },
+      order: { joinedAt: 'ASC', createdAt: 'ASC', id: 'ASC' },
+    });
+    return raw.map(ConversationMemberMapper.toDomain);
+  }
+
   async delete(id: Uuid, context?: TransactionContext): Promise<void> {
     await withTransaction(this.repository, context).update(id, {
       isDeleted: true,

@@ -11,6 +11,10 @@ import { NOTIFICATION_DI_TOKEN } from './notification.di-token';
 import { NotificationController } from './presentation/http/controllers/notification.controller';
 import { InboxModule } from 'modules/inbox/inbox.module';
 import { NotificationRequestedSubscriber } from './presentation/messaging/notification-requested.subscriber';
+import { ConversationModule } from 'modules/conversation/conversation.module';
+import { PushDeviceModule } from 'modules/push-device/push-device.module';
+import { NotificationDeliveryService } from './application/services/notification-delivery.service';
+import { ChatGateway } from 'modules/conversation/infrastructure/realtime/chat.gateway';
 
 const commandHandlers = [
   NotificationMarkReadCommandHandler,
@@ -22,6 +26,8 @@ const queryHandlers = [NotificationListQueryHandler];
   imports: [
     CqrsModule,
     InboxModule,
+    ConversationModule,
+    PushDeviceModule,
     TypeOrmModule.forFeature([NotificationTypeormEntity]),
   ],
   controllers: [NotificationController],
@@ -29,6 +35,15 @@ const queryHandlers = [NotificationListQueryHandler];
     ...commandHandlers,
     ...queryHandlers,
     NotificationRequestedSubscriber,
+    NotificationDeliveryService,
+    {
+      provide: NOTIFICATION_DI_TOKEN.DELIVERY,
+      useExisting: NotificationDeliveryService,
+    },
+    {
+      provide: NOTIFICATION_DI_TOKEN.REALTIME,
+      useExisting: ChatGateway,
+    },
     TypeOrmNotificationPageQuery,
     {
       provide: NOTIFICATION_DI_TOKEN.REPOSITORY,

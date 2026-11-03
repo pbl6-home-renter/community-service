@@ -18,6 +18,7 @@ import {
   NotificationRequestedEventValidator,
 } from './notification-requested.integration-event';
 import { ConsumerRegistry } from 'shared/infrastructure/messaging/rabbitmq/consumer/consumer-registry';
+import { NotificationDeliveryPort } from '../../application/ports/notification-delivery.port';
 
 @Injectable()
 export class NotificationRequestedSubscriber {
@@ -28,6 +29,8 @@ export class NotificationRequestedSubscriber {
     private readonly notifications: NotificationRepository,
     @Inject(UNIT_OF_WORK_DI_TOKEN)
     private readonly unitOfWork: IUnitOfWork,
+    @Inject(NOTIFICATION_DI_TOKEN.DELIVERY)
+    private readonly delivery: NotificationDeliveryPort,
   ) {}
 
   @RabbitSubscribe({
@@ -39,21 +42,25 @@ export class NotificationRequestedSubscriber {
   })
   async handle(event: IntegrationEvent): Promise<void> {
     NotificationRequestedEventValidator.assert(event);
-    await this.handleOnce(event);
+    const notifications = await this.handleOnce(event);
+    await Promise.all(
+      notifications.map((notification) => this.delivery.deliver(notification)),
+    );
   }
 
   private handleOnce(
     event: NotificationRequestedIntegrationEvent,
-  ): Promise<void> {
+  ): Promise<NotificationEntity[]> {
     return this.unitOfWork.run(async (context) => {
       const isNew = await this.inbox.recordIfNew(
         event.id,
         event.eventType,
         context,
       );
-      if (!isNew) return;
+      if (!isNew) return [];
 
       const recipientUserIds = new Set(event.payload.recipientUserIds);
+      const notifications: NotificationEntity[] = [];
       for (const recipientUserId of recipientUserIds) {
         const notification = NotificationEntity.create({
           recipientUserId,
@@ -66,7 +73,9 @@ export class NotificationRequestedSubscriber {
           data: event.payload.notification.data,
         });
         await this.notifications.save(notification, context);
+        notifications.push(notification);
       }
+      return notifications;
     });
   }
 }
