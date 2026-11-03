@@ -9,6 +9,8 @@ import { TypeOrmNotificationRepository } from './infrastructure/persistence/noti
 import { NotificationTypeormEntity } from './infrastructure/persistence/notification.typeorm-entity';
 import { NOTIFICATION_DI_TOKEN } from './notification.di-token';
 import { NotificationController } from './presentation/http/controllers/notification.controller';
+import { InboxModule } from 'modules/inbox/inbox.module';
+import { NotificationRequestedSubscriber } from './presentation/messaging/notification-requested.subscriber';
 
 const commandHandlers = [
   NotificationMarkReadCommandHandler,
@@ -17,11 +19,16 @@ const commandHandlers = [
 const queryHandlers = [NotificationListQueryHandler];
 
 @Module({
-  imports: [CqrsModule, TypeOrmModule.forFeature([NotificationTypeormEntity])],
+  imports: [
+    CqrsModule,
+    InboxModule,
+    TypeOrmModule.forFeature([NotificationTypeormEntity]),
+  ],
   controllers: [NotificationController],
   providers: [
     ...commandHandlers,
     ...queryHandlers,
+    NotificationRequestedSubscriber,
     TypeOrmNotificationPageQuery,
     {
       provide: NOTIFICATION_DI_TOKEN.REPOSITORY,
