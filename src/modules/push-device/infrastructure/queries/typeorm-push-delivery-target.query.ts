@@ -33,12 +33,13 @@ export class TypeOrmPushDeliveryTargetQuery implements PushDeliveryTargetQueryPo
           isDeleted: false,
         },
       }),
-      this.preferences.findByUserIds(userIds),
+      this.preferences.findByUserIds(userIds, category),
     ]);
     const preferenceByUser = new Map(
-      preferences
-        .filter((preference) => preference.category === category)
-        .map((preference) => [preference.userId, preference.pushEnabled]),
+      preferences.map((preference) => [
+        preference.userId,
+        preference.pushEnabled,
+      ]),
     );
     return devices
       .filter((device) => preferenceByUser.get(device.userId) !== false)

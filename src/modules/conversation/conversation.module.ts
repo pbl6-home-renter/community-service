@@ -30,7 +30,7 @@ import { IdentityMessageMediaValidatorService } from 'modules/message/infrastruc
 import { MessageMarkReadCommandHandler } from 'modules/message/application/commands/message-mark-read/message-mark-read.command.handler';
 import { ConversationMetadataUpdateCommandHandler } from './application/commands/conversation-metadata-update/conversation-metadata-update.command.handler';
 import { IdentityConversationAvatarValidatorService } from './infrastructure/services/identity-conversation-avatar-validator.service';
-import { SecurityModule } from 'shared/security.module';
+import { RealtimeModule } from 'modules/realtime/realtime.module';
 import { ConversationSocketAccessService } from './application/queries/conversation-socket-access.service';
 import { ChatGateway } from './infrastructure/realtime/chat.gateway';
 import { PushDeviceModule } from 'modules/push-device/push-device.module';
@@ -55,7 +55,7 @@ const queryHandlers = [
 @Module({
   imports: [
     CqrsModule,
-    SecurityModule,
+    RealtimeModule,
     ConversationMemberModule,
     MessageModule,
     PushDeviceModule,
@@ -122,7 +122,6 @@ const queryHandlers = [
   exports: [
     CONVERSATION_DI_TOKEN.REPOSITORY,
     CONVERSATION_DI_TOKEN.CHAT_REALTIME,
-    ChatGateway,
   ],
 })
 export class ConversationModule {}

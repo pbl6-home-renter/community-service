@@ -23,6 +23,7 @@ import { Uuid } from 'shared/domain/value-objects/uuid.vo';
 import { ApiSuccessResponse } from 'shared/presentation/decorators/api-success-response.decorator';
 import { CurrentUser } from 'shared/presentation/decorators/auth/current-user.decorator';
 import { ResponseCode } from 'shared/presentation/decorators/response-code.decorator';
+import { NotificationResponseCodeConstant } from '../constants/notification-response-code.constant';
 import { CursorPaginatedResponseDto } from 'shared/presentation/pagination/cursor-paginated.response.dto';
 import { NotificationMarkReadCommand } from '../../../application/commands/notification-mark-read.command';
 import { NotificationsMarkAllReadCommand } from '../../../application/commands/notifications-mark-all-read.command';
@@ -43,7 +44,7 @@ export class NotificationController {
   ) {}
 
   @Get()
-  @ResponseCode('NOTIFICATIONS_FETCHED')
+  @ResponseCode(NotificationResponseCodeConstant.NOTIFICATIONS_FETCHED)
   @ApiOperation({
     operationId: 'getNotifications',
     summary: 'List notifications',
@@ -56,7 +57,10 @@ export class NotificationController {
       required: ['statusCode', 'code', 'data', 'pagination'],
       properties: {
         statusCode: { type: 'integer', enum: [200] },
-        code: { type: 'string', enum: ['NOTIFICATIONS_FETCHED'] },
+        code: {
+          type: 'string',
+          enum: [NotificationResponseCodeConstant.NOTIFICATIONS_FETCHED],
+        },
         data: {
           type: 'array',
           items: { $ref: getSchemaPath(NotificationListResponseDto) },
@@ -100,13 +104,13 @@ export class NotificationController {
 
   @Post('mark-all-read')
   @HttpCode(HttpStatus.OK)
-  @ResponseCode('NOTIFICATIONS_ALL_MARKED_READ')
+  @ResponseCode(NotificationResponseCodeConstant.NOTIFICATIONS_ALL_MARKED_READ)
   @ApiOperation({
     operationId: 'postNotificationsMarkAllRead',
     summary: 'Mark all notifications as read',
   })
   @ApiSuccessResponse({
-    code: 'NOTIFICATIONS_ALL_MARKED_READ',
+    code: NotificationResponseCodeConstant.NOTIFICATIONS_ALL_MARKED_READ,
     dataDto: NotificationMarkAllReadResponseDto,
   })
   async markAllRead(
@@ -122,13 +126,13 @@ export class NotificationController {
 
   @Post(':notificationId/mark-read')
   @HttpCode(HttpStatus.OK)
-  @ResponseCode('NOTIFICATION_MARKED_READ')
+  @ResponseCode(NotificationResponseCodeConstant.NOTIFICATION_MARKED_READ)
   @ApiOperation({
     operationId: 'postNotificationsNotificationidMarkRead',
     summary: 'Mark notification as read',
   })
   @ApiSuccessResponse({
-    code: 'NOTIFICATION_MARKED_READ',
+    code: NotificationResponseCodeConstant.NOTIFICATION_MARKED_READ,
     dataDto: NotificationMarkReadResponseDto,
   })
   async markRead(

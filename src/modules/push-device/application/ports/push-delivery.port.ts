@@ -7,10 +7,15 @@ export interface PushMessage {
   data: Record<string, string>;
 }
 
+export interface PushRecipientMessage {
+  userId: Uuid;
+  message: PushMessage;
+}
+
 export interface PushDeliveryPort {
-  sendToUsers(
-    userIds: Uuid[],
+  /** Best-effort: never throws; failures are logged. */
+  send(
     category: NotificationCategory,
-    message: PushMessage,
+    recipients: PushRecipientMessage[],
   ): Promise<void>;
 }

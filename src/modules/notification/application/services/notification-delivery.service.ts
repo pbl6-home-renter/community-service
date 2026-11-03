@@ -19,7 +19,32 @@ export class NotificationDeliveryService implements NotificationDeliveryPort {
     private readonly pushDelivery: PushDeliveryPort,
   ) {}
 
-  async deliver(notification: NotificationEntity): Promise<void> {
+  async deliver(notifications: NotificationEntity[]): Promise<void> {
+    if (notifications.length === 0) return;
+    notifications.forEach((notification) => this.emitSocket(notification));
+
+    // Every notification of one event shares the same type, hence one category.
+    await this.pushDelivery.send(
+      this.categoryOf(notifications[0].type),
+      notifications.map((notification) => ({
+        userId: notification.recipientUserId,
+        message: {
+          title: notification.title,
+          body: notification.body,
+          data: {
+            ...this.toStringData(notification.data),
+            notificationId: notification.id,
+            type: notification.type,
+            ...(notification.deepLink
+              ? { deepLink: notification.deepLink }
+              : {}),
+          },
+        },
+      })),
+    );
+  }
+
+  private emitSocket(notification: NotificationEntity): void {
     try {
       this.realtime.notificationCreated(notification.recipientUserId, {
         notificationId: notification.id,
@@ -35,31 +60,12 @@ export class NotificationDeliveryService implements NotificationDeliveryPort {
         `Socket delivery failed for notification ${notification.id}: ${String(error)}`,
       );
     }
+  }
 
-    try {
-      await this.pushDelivery.sendToUsers(
-        [notification.recipientUserId],
-        notification.type === NotificationType.INVOICE
-          ? NotificationCategory.INVOICE
-          : NotificationCategory.ISSUE,
-        {
-          title: notification.title,
-          body: notification.body,
-          data: {
-            ...this.toStringData(notification.data),
-            notificationId: notification.id,
-            type: notification.type,
-            ...(notification.deepLink
-              ? { deepLink: notification.deepLink }
-              : {}),
-          },
-        },
-      );
-    } catch (error) {
-      this.logger.warn(
-        `Push delivery failed for notification ${notification.id}: ${String(error)}`,
-      );
-    }
+  private categoryOf(type: NotificationType): NotificationCategory {
+    return type === NotificationType.INVOICE
+      ? NotificationCategory.INVOICE
+      : NotificationCategory.ISSUE;
   }
 
   private toStringData(

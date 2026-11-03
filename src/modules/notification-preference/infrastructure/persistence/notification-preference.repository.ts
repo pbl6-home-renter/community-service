@@ -8,6 +8,7 @@ import { NotificationPreferenceEntity } from '../../domain/entities/notification
 import { NotificationCategory } from '../../domain/enums/notification-category.enum';
 import { NotificationPreferenceRepository } from '../../domain/repositories/notification-preference.repository';
 import { NotificationPreferenceTypeormEntity } from './notification-preference.typeorm-entity';
+import { NotificationPreferenceMapper } from './mappers/notification-preference.mapper';
 
 @Injectable()
 export class TypeOrmNotificationPreferenceRepository implements NotificationPreferenceRepository {
@@ -19,36 +20,17 @@ export class TypeOrmNotificationPreferenceRepository implements NotificationPref
     const records = await this.repository.find({
       where: { userId, isDeleted: false },
     });
-    return records.map((record) =>
-      NotificationPreferenceEntity.reconstitute({
-        id: record.id,
-        userId: record.userId,
-        category: record.category,
-        pushEnabled: record.pushEnabled,
-        createdAt: record.createdAt,
-        updatedAt: record.updatedAt,
-        isDeleted: record.isDeleted,
-      }),
-    );
+    return records.map(NotificationPreferenceMapper.toDomain);
   }
   async findByUserIds(
     userIds: Uuid[],
+    category: NotificationCategory,
   ): Promise<NotificationPreferenceEntity[]> {
     if (userIds.length === 0) return [];
     const records = await this.repository.find({
-      where: { userId: In(userIds), isDeleted: false },
+      where: { userId: In(userIds), category, isDeleted: false },
     });
-    return records.map((record) =>
-      NotificationPreferenceEntity.reconstitute({
-        id: record.id,
-        userId: record.userId,
-        category: record.category,
-        pushEnabled: record.pushEnabled,
-        createdAt: record.createdAt,
-        updatedAt: record.updatedAt,
-        isDeleted: record.isDeleted,
-      }),
-    );
+    return records.map(NotificationPreferenceMapper.toDomain);
   }
   async replaceAll(
     userId: Uuid,
