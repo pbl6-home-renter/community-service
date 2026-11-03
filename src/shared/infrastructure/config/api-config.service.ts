@@ -11,6 +11,7 @@ import { RabbitMqConfig } from './rabbitmq.config';
 import { AuthConfig } from './auth.config';
 import { PeerServicesConfig } from './peer-services.config';
 import { FcmConfig } from './fcm.config';
+import { SmtpConfig } from './smtp.config';
 
 @Injectable()
 export class ApiConfigService {
@@ -155,6 +156,11 @@ export class ApiConfigService {
         'TENANCY_SERVICE_URL',
         '',
       ),
+      communityUrl: getConfigString(
+        this.configService,
+        'COMMUNITY_SERVICE_URL',
+        '',
+      ),
       timeoutMs: getConfigNumber(
         this.configService,
         'INTERNAL_HTTP_TIMEOUT_MS',
@@ -169,5 +175,39 @@ export class ApiConfigService {
       clientEmail: getConfigString(this.configService, 'FCM_CLIENT_EMAIL', ''),
       privateKey: getConfigString(this.configService, 'FCM_PRIVATE_KEY', ''),
     };
+  }
+
+  get smtp(): SmtpConfig {
+    const port = getConfigNumber(this.configService, 'MAIL_PORT', 1025);
+    return {
+      host: getConfigString(this.configService, 'MAIL_HOST', 'localhost'),
+      port,
+      secure: getConfigBoolean(this.configService, 'MAIL_SECURE', port === 465),
+      user: getConfigString(this.configService, 'MAIL_USER', ''),
+      password: getConfigString(this.configService, 'MAIL_PASS', ''),
+      fromAddress: getConfigString(
+        this.configService,
+        'MAIL_FROM',
+        'no-reply@localhost',
+      ),
+      fromName: getConfigString(
+        this.configService,
+        'MAIL_FROM_NAME',
+        this.appName,
+      ),
+      deliveryRetentionMs: getConfigNumber(
+        this.configService,
+        'EMAIL_DELIVERY_RETENTION_MS',
+        7776000000,
+      ),
+    };
+  }
+
+  get publicAppUrl(): string {
+    return getConfigString(
+      this.configService,
+      'PUBLIC_APP_URL',
+      'http://localhost:5173',
+    ).replace(/\/$/, '');
   }
 }

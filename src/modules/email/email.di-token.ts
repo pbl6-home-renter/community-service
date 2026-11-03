@@ -1,0 +1,4 @@
+export const EMAIL_DI_TOKEN = {
+  DELIVERY_REPOSITORY: Symbol('EMAIL_DELIVERY_REPOSITORY'),
+  SENDER: Symbol('EMAIL_SENDER'),
+} as const;

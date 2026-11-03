@@ -319,6 +319,11 @@ diff -rq --strip-trailing-cr boilerplate/src/shared <Service>/src/shared   # ph�
 | `RABBITMQ_PUBLISH_MANDATORY` | Không | Cờ `mandatory` khi publish, mặc định `true` |
 | `RABBITMQ_CONSUMER_MAX_ATTEMPTS` | Không | Số lần xử lý trước khi vào `<queue>.dlq`, mặc định `5` |
 | `RABBITMQ_CONSUMER_RETRY_DELAY_MS` | Không | Thời gian chờ trong `<queue>.retry`, mặc định `10000` |
+| **Email qua SMTP** | | |
+| `MAIL_HOST`, `MAIL_PORT`, `MAIL_SECURE` | Không | SMTP server; mặc định `localhost:1025`, secure theo port `465` |
+| `MAIL_USER`, `MAIL_PASS` | Không | SMTP auth; phải cấu hình cùng nhau hoặc để trống cả hai |
+| `MAIL_FROM`, `MAIL_FROM_NAME` | Không | Người gửi cố định do Community cấu hình |
+| `EMAIL_DELIVERY_RETENTION_MS` | Không | Giữ metadata email delivery, mặc định 90 ngày; không lưu body |
 | **Transactional Outbox** | | |
 | `OUTBOX_RELAY_ENABLED` | Không | Bật/tắt relay, mặc định `true` |
 | `OUTBOX_RELAY_INTERVAL_MS` | Không | Chu kỳ poll, mặc định `1000` |
@@ -334,7 +339,7 @@ diff -rq --strip-trailing-cr boilerplate/src/shared <Service>/src/shared   # ph�
 <details>
 <summary><b>Biến có trong <code>.env.example</code> nhưng code hiện chưa đọc</b></summary>
 
-`API_DOMAIN`, `API_VERSION`, `RABBITMQ_DEFAULT_USER`, `RABBITMQ_DEFAULT_PASS` (credential cho container RabbitMQ), `REDIS_HOST`, `REDIS_PORT`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASS`, `MAIL_FROM` — giữ làm placeholder cho service cần Redis/SMTP.
+`API_DOMAIN`, `API_VERSION`, `RABBITMQ_DEFAULT_USER`, `RABBITMQ_DEFAULT_PASS` (credential cho container RabbitMQ), `REDIS_HOST`, `REDIS_PORT` — hiện chưa được code đọc.
 
 </details>
 
