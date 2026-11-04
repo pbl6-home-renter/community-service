@@ -141,6 +141,9 @@ export class TypeOrmConversationPageQuery implements ConversationPageQueryPort {
       .from(MessageTypeormEntity, 'lastActivityMessage')
       .where('lastActivityMessage.conversationId = conversation.id')
       .andWhere('lastActivityMessage.isDeleted = false')
+      .andWhere(
+        '(currentMember.status = :activeStatus OR lastActivityMessage.sequence <= currentMember.leftSequence)',
+      )
       .getQuery();
     const activityOrder = `COALESCE(${latestActivity}, conversation.createdAt)`;
     queryBuilder
