@@ -101,6 +101,7 @@ export class ConversationMetadataUpdateCommandHandler implements ICommandHandler
       if (titleChanged) {
         const payload = ConversationTitleChangedMessagePayload.create(
           command.actorUserId,
+          actor.displayName,
           oldTitle,
           updated.title?.value ?? null,
         ).toJSON();
@@ -116,6 +117,7 @@ export class ConversationMetadataUpdateCommandHandler implements ICommandHandler
       if (avatarChanged) {
         const payload = ConversationAvatarChangedMessagePayload.create(
           command.actorUserId,
+          actor.displayName,
           oldAvatarMediaId,
           updated.avatarMediaId,
         ).toJSON();
@@ -161,7 +163,7 @@ export class ConversationMetadataUpdateCommandHandler implements ICommandHandler
   private ensureGroupAdmin(
     conversation: ConversationEntity,
     actor: ConversationMemberEntity | null,
-  ): void {
+  ): asserts actor is ConversationMemberEntity {
     if (conversation.kind !== ConversationKind.GROUP) {
       throw new ValidationException(
         'Only group conversations support metadata updates',

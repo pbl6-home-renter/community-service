@@ -19,6 +19,18 @@ import { ConversationForbiddenException } from 'modules/conversation/domain/exce
 import { MessageConversationNotFoundException } from '../../../domain/exceptions/message-conversation-not-found.exception';
 import { ChatRealtimePort } from 'modules/conversation/application/ports/chat-realtime.port';
 import { ChatMessagePushNotifier } from '../../services/chat-message-push-notifier';
+import { ConversationKind } from 'modules/conversation/domain/enums/conversation-kind.enum';
+import { ConversationEntity } from 'modules/conversation/domain/entities/conversation.entity';
+import { ConversationMemberEntity } from 'modules/conversation-member/domain/entities/conversation-member.entity';
+
+type MessageSendResult =
+  | { message: MessageEntity; created: false }
+  | {
+      message: MessageEntity;
+      created: true;
+      conversation: ConversationEntity;
+      activeMembers: ConversationMemberEntity[];
+    };
 
 @CommandHandler(MessageSendCommand)
 export class MessageSendCommandHandler implements ICommandHandler<
@@ -69,51 +81,80 @@ export class MessageSendCommandHandler implements ICommandHandler<
       );
     }
 
-    const result = await this.unitOfWork.run(async (context) => {
-      const conversation = await this.conversations.findByIdForUpdate(
-        command.conversationId,
-        context,
-      );
-      if (!conversation) throw new MessageConversationNotFoundException();
+    const result = await this.unitOfWork.run<MessageSendResult>(
+      async (context) => {
+        const conversation = await this.conversations.findByIdForUpdate(
+          command.conversationId,
+          context,
+        );
+        if (!conversation) throw new MessageConversationNotFoundException();
 
-      const member = await this.members.findByParticipantForUpdate(
-        command.conversationId,
-        {
-          participantType: ConversationParticipantType.USER,
-          userId: command.senderUserId,
-        },
-        context,
-      );
-      if (!member || member.status !== ConversationMemberStatus.ACTIVE) {
-        throw new ConversationForbiddenException();
-      }
+        const member = await this.members.findByParticipantForUpdate(
+          command.conversationId,
+          {
+            participantType: ConversationParticipantType.USER,
+            userId: command.senderUserId,
+          },
+          context,
+        );
+        if (!member || member.status !== ConversationMemberStatus.ACTIVE) {
+          throw new ConversationForbiddenException();
+        }
 
-      const existing = await this.messages.findByIdempotencyKey(
-        member.id,
-        command.clientMessageId,
-      );
-      if (existing) return { message: existing, created: false };
+        const existing = await this.messages.findByIdempotencyKey(
+          member.id,
+          command.clientMessageId,
+        );
+        if (existing) return { message: existing, created: false };
 
-      const sequence = await this.messages.nextSequenceForUpdate(
-        command.conversationId,
-        context,
-      );
-      const message = MessageEntity.create({
-        conversationId: command.conversationId,
-        senderMemberId: member.id,
-        senderNameSnapshot: member.displayName,
-        clientMessageId: command.clientMessageId,
-        type: command.type,
-        content: command.content,
-        mediaId: command.mediaId,
-        sequence,
-      });
-      await this.messages.save(message, context);
-      return { message, created: true };
-    });
+        const sequence = await this.messages.nextSequenceForUpdate(
+          command.conversationId,
+          context,
+        );
+        const message = MessageEntity.create({
+          conversationId: command.conversationId,
+          senderMemberId: member.id,
+          senderNameSnapshot: member.displayName,
+          clientMessageId: command.clientMessageId,
+          type: command.type,
+          content: command.content,
+          mediaId: command.mediaId,
+          sequence,
+        });
+        await this.messages.save(message, context);
+        const activeMembers = await this.members.findActiveUserMembersForUpdate(
+          command.conversationId,
+          context,
+        );
+        return { message, created: true, conversation, activeMembers };
+      },
+    );
     if (result.created) {
       const createdMessage = result.message;
       this.realtime.messageCreated(createdMessage, command.senderUserId);
+      for (const member of result.activeMembers) {
+        const recipientUserId = member.userId;
+        if (!recipientUserId) continue;
+        const otherMember = result.activeMembers.find(
+          (candidate) =>
+            candidate.userId !== null &&
+            candidate.userId.toLowerCase() !== recipientUserId.toLowerCase(),
+        );
+        this.realtime.messageReceived(recipientUserId, {
+          messageId: createdMessage.id,
+          conversationId: createdMessage.conversationId,
+          sequence: createdMessage.sequence,
+          senderUserId: command.senderUserId,
+          senderName: createdMessage.senderNameSnapshot,
+          conversationName:
+            result.conversation.kind === ConversationKind.DIRECT
+              ? (otherMember?.displayName ?? null)
+              : (result.conversation.title?.value ?? null),
+          type: command.type,
+          contentPreview: this.createContentPreview(createdMessage),
+          createdAt: createdMessage.createdAt,
+        });
+      }
       void this.chatMessagePushNotifier.notify(
         createdMessage,
         command.senderUserId,
@@ -139,5 +180,11 @@ export class MessageSendCommandHandler implements ICommandHandler<
     if (content !== null && content.length > 4000) {
       throw new MessageContentInvalidException();
     }
+  }
+
+  private createContentPreview(message: MessageEntity): string {
+    if (message.type === MessageType.IMAGE) return 'Đã gửi ảnh';
+    const content = message.content ?? '';
+    return content.length <= 120 ? content : `${content.slice(0, 117)}...`;
   }
 }

@@ -5,10 +5,12 @@ import {
   ConversationMemberRoleValue,
   MemberRoleChangedMessagePayloadData,
 } from '../types/message-payload.type';
+import { isValidSystemMessageActorName } from '../validation/system-message-actor.validation';
 
 export class MemberRoleChangedMessagePayload {
   private constructor(
     readonly actorUserId: Uuid,
+    readonly actorDisplayName: string,
     readonly member: Readonly<ConversationMemberSnapshot>,
     readonly oldRole: ConversationMemberRoleValue,
     readonly newRole: ConversationMemberRoleValue,
@@ -16,12 +18,14 @@ export class MemberRoleChangedMessagePayload {
 
   static create(
     actorUserId: Uuid,
+    actorDisplayName: string,
     member: ConversationMemberSnapshot,
     oldRole: ConversationMemberRoleValue,
     newRole: ConversationMemberRoleValue,
   ): MemberRoleChangedMessagePayload {
     if (
       !isValidUuid(actorUserId) ||
+      !isValidSystemMessageActorName(actorDisplayName) ||
       !isValidUuid(member.userId) ||
       typeof member.displayName !== 'string' ||
       member.displayName.trim().length === 0 ||
@@ -36,6 +40,7 @@ export class MemberRoleChangedMessagePayload {
     }
     return new MemberRoleChangedMessagePayload(
       actorUserId,
+      actorDisplayName,
       Object.freeze({ ...member }),
       oldRole,
       newRole,
@@ -46,6 +51,7 @@ export class MemberRoleChangedMessagePayload {
     return {
       action: 'member_role_changed',
       actorUserId: this.actorUserId,
+      actorDisplayName: this.actorDisplayName,
       member: { ...this.member },
       oldRole: this.oldRole,
       newRole: this.newRole,

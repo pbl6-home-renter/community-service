@@ -1,6 +1,7 @@
 import { ValidationException } from 'shared/domain/exceptions/validation.exception';
 import { Uuid, isValidUuid } from 'shared/domain/value-objects/uuid.vo';
 import { MembersAddedMessagePayloadData } from '../types/message-payload.type';
+import { isValidSystemMessageActorName } from '../validation/system-message-actor.validation';
 
 export interface AddedMessageMemberSnapshot {
   userId: Uuid;
@@ -9,6 +10,7 @@ export interface AddedMessageMemberSnapshot {
 
 export interface MembersAddedMessagePayloadProps {
   actorUserId: Uuid;
+  actorDisplayName: string;
   members: AddedMessageMemberSnapshot[];
 }
 
@@ -19,6 +21,7 @@ export class MembersAddedMessagePayload {
 
   private constructor(
     readonly actorUserId: Uuid,
+    readonly actorDisplayName: string,
     members: AddedMessageMemberSnapshot[],
   ) {
     this._members = members.map((member) => Object.freeze({ ...member }));
@@ -27,7 +30,10 @@ export class MembersAddedMessagePayload {
   static create(
     props: MembersAddedMessagePayloadProps,
   ): MembersAddedMessagePayload {
-    if (!isValidUuid(props.actorUserId)) {
+    if (
+      !isValidUuid(props.actorUserId) ||
+      !isValidSystemMessageActorName(props.actorDisplayName)
+    ) {
       throw new ValidationException('System message actor user ID is invalid');
     }
     if (!Array.isArray(props.members) || props.members.length === 0) {
@@ -60,7 +66,11 @@ export class MembersAddedMessagePayload {
       memberIds.add(member.userId.toLowerCase());
     }
 
-    return new MembersAddedMessagePayload(props.actorUserId, props.members);
+    return new MembersAddedMessagePayload(
+      props.actorUserId,
+      props.actorDisplayName,
+      props.members,
+    );
   }
 
   get members(): AddedMessageMemberSnapshot[] {
@@ -71,6 +81,7 @@ export class MembersAddedMessagePayload {
     return {
       action: 'members_added',
       actorUserId: this.actorUserId,
+      actorDisplayName: this.actorDisplayName,
       members: this.members,
     };
   }

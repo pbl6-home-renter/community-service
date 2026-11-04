@@ -4,15 +4,18 @@ import {
   ConversationMemberSnapshot,
   MemberLeftMessagePayloadData,
 } from '../types/message-payload.type';
+import { isValidSystemMessageActorName } from '../validation/system-message-actor.validation';
 
 export class MemberLeftMessagePayload {
   private constructor(
     readonly actorUserId: Uuid,
+    readonly actorDisplayName: string,
     readonly member: Readonly<ConversationMemberSnapshot>,
   ) {}
 
   static create(
     actorUserId: Uuid,
+    actorDisplayName: string,
     member: ConversationMemberSnapshot,
   ): MemberLeftMessagePayload {
     if (actorUserId.toLowerCase() !== member.userId.toLowerCase()) {
@@ -22,6 +25,7 @@ export class MemberLeftMessagePayload {
     }
     if (
       !isValidUuid(actorUserId) ||
+      !isValidSystemMessageActorName(actorDisplayName) ||
       !isValidUuid(member.userId) ||
       typeof member.displayName !== 'string' ||
       member.displayName.trim().length === 0 ||
@@ -31,6 +35,7 @@ export class MemberLeftMessagePayload {
     }
     return new MemberLeftMessagePayload(
       actorUserId,
+      actorDisplayName,
       Object.freeze({ ...member }),
     );
   }
@@ -39,6 +44,7 @@ export class MemberLeftMessagePayload {
     return {
       action: 'member_left',
       actorUserId: this.actorUserId,
+      actorDisplayName: this.actorDisplayName,
       member: { ...this.member },
     };
   }

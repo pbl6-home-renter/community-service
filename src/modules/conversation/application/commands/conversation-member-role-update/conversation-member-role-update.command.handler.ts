@@ -115,6 +115,7 @@ export class ConversationMemberRoleUpdateCommandHandler implements ICommandHandl
       );
       const payload = MemberRoleChangedMessagePayload.create(
         command.actorUserId,
+        actor.displayName,
         { userId: target.userId!, displayName: target.displayName },
         oldRole === ConversationMemberRole.ADMIN ? 'admin' : 'member',
         command.role === ConversationMemberRole.ADMIN ? 'admin' : 'member',

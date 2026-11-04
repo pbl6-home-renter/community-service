@@ -33,11 +33,11 @@ export class ConversationMemberResponseDto {
   @ApiProperty({ format: 'date-time', nullable: true })
   leftAt: Date | null;
 
-  @ApiProperty({ type: Number, format: 'int64', nullable: true })
-  leftSequence: number | null;
+  @ApiProperty({ type: String, pattern: '^(0|[1-9]\\d*)$', nullable: true })
+  leftSequence: string | null;
 
-  @ApiProperty({ type: Number, format: 'int64', minimum: 0 })
-  lastReadSequence: number;
+  @ApiProperty({ type: String, pattern: '^(0|[1-9]\\d*)$' })
+  lastReadSequence: string;
 
   @ApiProperty({ format: 'date-time' })
   createdAt: Date;
@@ -61,10 +61,8 @@ export class ConversationMemberResponseDto {
     response.status = member.status;
     response.joinedAt = member.joinedAt;
     response.leftAt = member.leftAt;
-    response.leftSequence = member.leftSequence
-      ? Number(member.leftSequence)
-      : null;
-    response.lastReadSequence = Number(member.lastReadSequence);
+    response.leftSequence = member.leftSequence;
+    response.lastReadSequence = member.lastReadSequence;
     response.createdAt = member.createdAt;
     response.updatedAt = member.updatedAt;
     response.isDeleted = member.isDeleted;

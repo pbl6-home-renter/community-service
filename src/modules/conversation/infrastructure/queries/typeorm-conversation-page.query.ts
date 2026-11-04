@@ -10,6 +10,7 @@ import { ConversationMemberTypeormEntity } from 'modules/conversation-member/inf
 import { UNREAD_COUNTED_MESSAGE_TYPES } from 'modules/message/domain/constants/unread-counted-message-types.constant';
 import { MessageType } from 'modules/message/domain/enums/message-type.enum';
 import { MessageTypeormEntity } from 'modules/message/infrastructure/persistence/message.typeorm-entity';
+import { MessagePayload } from 'modules/message/domain/types/message-payload.type';
 import {
   ConversationListReadModel,
   ConversationPageQuery,
@@ -32,6 +33,7 @@ interface ConversationActivityRow {
   senderNameSnapshot: string | null;
   lastMessageContent: string | null;
   lastMessageType: MessageType | null;
+  lastMessagePayload: MessagePayload | null;
   lastMessageSentAt: Date | null;
 }
 
@@ -169,6 +171,7 @@ export class TypeOrmConversationPageQuery implements ConversationPageQueryPort {
          latest_message.sender_name_snapshot AS "senderNameSnapshot",
          latest_message.content AS "lastMessageContent",
          latest_message.message_type AS "lastMessageType",
+         latest_message.payload AS "lastMessagePayload",
          latest_message.created_at AS "lastMessageSentAt"
        FROM conversation_members AS current_member
        LEFT JOIN LATERAL (
@@ -183,7 +186,7 @@ export class TypeOrmConversationPageQuery implements ConversationPageQueryPort {
        ) AS other_member ON true
        LEFT JOIN LATERAL (
          SELECT message.id, message.sequence, message.sender_name_snapshot,
-                message.content, message.message_type, message.created_at
+                message.content, message.message_type, message.payload, message.created_at
          FROM messages AS message
          WHERE message.conversation_id = current_member.conversation_id
            AND message.is_deleted = false
@@ -244,6 +247,7 @@ export class TypeOrmConversationPageQuery implements ConversationPageQueryPort {
                     ? 'Đã gửi ảnh'
                     : activity.lastMessageContent,
                 type: activity.lastMessageType!,
+                payload: activity.lastMessagePayload,
                 sentAt: activity.lastMessageSentAt!,
               }
             : null,

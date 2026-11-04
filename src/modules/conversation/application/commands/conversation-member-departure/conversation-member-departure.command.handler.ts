@@ -117,14 +117,22 @@ export class ConversationMemberDepartureCommandHandler implements ICommandHandle
 
       const departurePayload =
         command.action === 'kick'
-          ? MemberKickedMessagePayload.create(command.actorUserId, {
-              userId: target.userId!,
-              displayName: target.displayName,
-            }).toJSON()
-          : MemberLeftMessagePayload.create(command.actorUserId, {
-              userId: target.userId!,
-              displayName: target.displayName,
-            }).toJSON();
+          ? MemberKickedMessagePayload.create(
+              command.actorUserId,
+              actor.displayName,
+              {
+                userId: target.userId!,
+                displayName: target.displayName,
+              },
+            ).toJSON()
+          : MemberLeftMessagePayload.create(
+              command.actorUserId,
+              actor.displayName,
+              {
+                userId: target.userId!,
+                displayName: target.displayName,
+              },
+            ).toJSON();
       const departureMessage = await this.saveSystemMessage(
         conversation.id,
         systemMember,
@@ -137,6 +145,7 @@ export class ConversationMemberDepartureCommandHandler implements ICommandHandle
       if (successor) {
         const transferPayload = AdminTransferredMessagePayload.create(
           command.actorUserId,
+          actor.displayName,
           {
             userId: successor.userId!,
             displayName: successor.displayName,
