@@ -9,6 +9,8 @@ import { ConversationMemberDepartureCommandHandler } from './application/command
 import { ConversationMemberRoleUpdateCommandHandler } from './application/commands/conversation-member-role-update/conversation-member-role-update.command.handler';
 import { ConversationListQueryHandler } from './application/queries/conversation-list/conversation-list.query.handler';
 import { ConversationGetDetailQueryHandler } from './application/queries/conversation-get-detail/conversation-get-detail.query.handler';
+import { ConversationUnreadSummaryQueryHandler } from './application/queries/conversation-unread-summary/conversation-unread-summary.query.handler';
+import { TypeOrmConversationUnreadSummaryQuery } from './infrastructure/queries/typeorm-conversation-unread-summary.query';
 import { IdentityConversationUserLookupService } from './infrastructure/services/identity-conversation-user-lookup.service';
 import { TypeOrmConversationDetailQuery } from './infrastructure/queries/typeorm-conversation-detail.query';
 import { TypeOrmConversationPageQuery } from './infrastructure/queries/typeorm-conversation-page.query';
@@ -48,6 +50,7 @@ const commandHandlers = [
 const queryHandlers = [
   ConversationListQueryHandler,
   ConversationGetDetailQueryHandler,
+  ConversationUnreadSummaryQueryHandler,
   ConversationMediaOwnershipLookupQueryHandler,
   MessageListQueryHandler,
 ];
@@ -97,6 +100,10 @@ const queryHandlers = [
     {
       provide: CONVERSATION_DI_TOKEN.DETAIL_QUERY,
       useExisting: TypeOrmConversationDetailQuery,
+    },
+    {
+      provide: CONVERSATION_DI_TOKEN.UNREAD_SUMMARY_QUERY,
+      useClass: TypeOrmConversationUnreadSummaryQuery,
     },
     {
       provide: CONVERSATION_DI_TOKEN.PAGE_QUERY,

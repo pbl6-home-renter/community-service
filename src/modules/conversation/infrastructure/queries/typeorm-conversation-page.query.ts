@@ -7,6 +7,7 @@ import { Uuid } from 'shared/domain/value-objects/uuid.vo';
 import { ConversationMemberStatus } from 'modules/conversation-member/domain/enums/conversation-member-status.enum';
 import { ConversationParticipantType } from 'modules/conversation-member/domain/enums/conversation-participant-type.enum';
 import { ConversationMemberTypeormEntity } from 'modules/conversation-member/infrastructure/persistence/conversation-member.typeorm-entity';
+import { UNREAD_COUNTED_MESSAGE_TYPES } from 'modules/message/domain/constants/unread-counted-message-types.constant';
 import { MessageType } from 'modules/message/domain/enums/message-type.enum';
 import { MessageTypeormEntity } from 'modules/message/infrastructure/persistence/message.typeorm-entity';
 import {
@@ -125,12 +126,13 @@ export class TypeOrmConversationPageQuery implements ConversationPageQueryPort {
              OR message.sequence <= current_member.left_sequence
            )
            AND message.sender_member_id <> current_member.id
+           AND message.message_type = ANY($3::text[])
        ) AS unread_messages ON true
        WHERE current_member.user_id = $1
          AND current_member.participant_type = 'user'
          AND current_member.is_deleted = false
          AND current_member.conversation_id = ANY($2::uuid[])`,
-      [query.userId, conversationIds],
+      [query.userId, conversationIds, UNREAD_COUNTED_MESSAGE_TYPES],
     )) as ConversationActivityRow[];
     const activityByConversationId = new Map(
       activityRows.map((row) => [row.conversationId.toLowerCase(), row]),
