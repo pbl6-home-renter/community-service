@@ -39,7 +39,7 @@ export class MessageTypeormEntity extends AbstractEntity {
   @Column({ type: 'uuid', nullable: true })
   clientMessageId: Uuid | null;
 
-  @Column({ type: 'varchar', length: 20 })
+  @Column({ name: 'message_type', type: 'varchar', length: 20 })
   type: MessageType;
 
   @Column({ type: 'varchar', length: 4000, nullable: true })
