@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Uuid } from 'shared/domain/value-objects/uuid.vo';
 import { ConversationCreateResult } from 'modules/conversation/application/commands/conversation-create/conversation-create.result';
 import { ConversationResponseCodeConstant } from '../constants/conversation-response-code.constant';
 import { ConversationDetailResponseDto } from './conversation-detail.response.dto';
@@ -20,12 +21,16 @@ export class ConversationCreateResponseDto {
 
   static fromResult(
     result: ConversationCreateResult,
+    viewerUserId: Uuid,
   ): ConversationCreateResponseDto {
     const response = new ConversationCreateResponseDto();
     response.code = result.wasCreated
       ? ConversationResponseCodeConstant.CONVERSATION_CREATED
       : ConversationResponseCodeConstant.CONVERSATION_REOPENED;
-    response.data = ConversationDetailResponseDto.fromResult(result);
+    response.data = ConversationDetailResponseDto.fromResult(
+      result,
+      viewerUserId,
+    );
     return response;
   }
 }

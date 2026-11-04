@@ -21,6 +21,14 @@ export class ConversationListResponseDto {
   @ApiPropertyOptional({ maxLength: 255, nullable: true })
   title: string | null;
 
+  @ApiProperty({
+    maxLength: 255,
+    nullable: true,
+    description:
+      'Theo người xem: direct là tên snapshot của người còn lại, group là title.',
+  })
+  displayName: string | null;
+
   @ApiPropertyOptional({ format: 'uuid', nullable: true })
   avatarMediaId: Uuid | null;
 
@@ -42,6 +50,7 @@ export class ConversationListResponseDto {
     response.contextType = conversation.contextType;
     response.contextId = conversation.contextId;
     response.title = conversation.title;
+    response.displayName = conversation.displayName;
     response.avatarMediaId = conversation.avatarMediaId;
     response.unreadCount = conversation.unreadCount;
     response.lastMessage = conversation.lastMessage

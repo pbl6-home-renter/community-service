@@ -3,6 +3,7 @@ import { Uuid } from 'shared/domain/value-objects/uuid.vo';
 import { ConversationDetailQueryResult } from 'modules/conversation/application/ports/conversation-detail-query.port';
 import { ConversationContextType } from 'modules/conversation/domain/enums/conversation-context-type.enum';
 import { ConversationKind } from 'modules/conversation/domain/enums/conversation-kind.enum';
+import { ConversationParticipantType } from 'modules/conversation-member/domain/enums/conversation-participant-type.enum';
 import { ConversationMemberResponseDto } from './conversation-member.response.dto';
 
 export class ConversationDetailResponseDto {
@@ -21,6 +22,14 @@ export class ConversationDetailResponseDto {
   @ApiProperty({ maxLength: 255, nullable: true })
   title: string | null;
 
+  @ApiProperty({
+    maxLength: 255,
+    nullable: true,
+    description:
+      'Theo người xem: direct là tên snapshot của người còn lại, group là title.',
+  })
+  displayName: string | null;
+
   @ApiProperty({ format: 'uuid', nullable: true })
   avatarMediaId: Uuid | null;
 
@@ -35,6 +44,7 @@ export class ConversationDetailResponseDto {
       ConversationDetailQueryResult,
       'conversation' | 'members' | 'unreadCount'
     >,
+    viewerUserId: Uuid,
   ): ConversationDetailResponseDto {
     const response = new ConversationDetailResponseDto();
     response.id = result.conversation.id;
@@ -42,6 +52,14 @@ export class ConversationDetailResponseDto {
     response.contextType = result.conversation.contextType;
     response.contextId = result.conversation.contextId;
     response.title = result.conversation.title?.value ?? null;
+    response.displayName =
+      result.conversation.kind === ConversationKind.DIRECT
+        ? (result.members.find(
+            (member) =>
+              member.participantType === ConversationParticipantType.USER &&
+              member.userId?.toLowerCase() !== viewerUserId.toLowerCase(),
+          )?.displayName ?? null)
+        : response.title;
     response.avatarMediaId = result.conversation.avatarMediaId;
     response.unreadCount = result.unreadCount;
     response.members = result.members.map(
