@@ -17,6 +17,8 @@ import { Uuid } from 'shared/domain/value-objects/uuid.vo';
 import { PostgresErrorCode } from 'shared/infrastructure/database/postgres-error-code';
 import { ConversationEntity } from '../../../domain/entities/conversation.entity';
 import { ConversationKind } from '../../../domain/enums/conversation-kind.enum';
+import { ConversationGroupMembersInsufficientException } from '../../../domain/exceptions/conversation-group-members-insufficient.exception';
+import { ConversationTitle } from '../../../domain/value-objects/conversation-title.vo';
 import { ConversationRepository } from '../../../domain/repositories/conversation.repository';
 import { CONVERSATION_DI_TOKEN } from '../../../conversation.di-token';
 import { ConversationCreateCommand } from './conversation-create.command';
@@ -51,6 +53,10 @@ export class ConversationCreateCommandHandler implements ICommandHandler<
       throw new ValidationException('Conversation kind is invalid');
     }
 
+    if (command.kind === ConversationKind.GROUP) {
+      this.assertGroupHasEnoughMembers(command);
+    }
+
     const requestedUserIds =
       command.kind === ConversationKind.DIRECT
         ? command.recipientUserId
@@ -71,6 +77,21 @@ export class ConversationCreateCommandHandler implements ICommandHandler<
       this.realtime.membershipActivated(member.userId!, result.conversation.id);
     }
     return result;
+  }
+
+  /** A free group needs at least two distinct users besides the creator. */
+  private assertGroupHasEnoughMembers(
+    command: ConversationCreateCommand,
+  ): void {
+    const callerUserId = command.callerUserId.toLowerCase();
+    const otherUserIds = new Set(
+      command.memberUserIds
+        .map((userId) => userId.toLowerCase())
+        .filter((userId) => userId !== callerUserId),
+    );
+    if (otherUserIds.size < 2) {
+      throw new ConversationGroupMembersInsufficientException();
+    }
   }
 
   private async getDisplayNames(userIds: Uuid[]): Promise<Map<string, string>> {
@@ -253,16 +274,23 @@ export class ConversationCreateCommandHandler implements ICommandHandler<
     displayNames: Map<string, string>,
   ): Promise<ConversationCreateResult> {
     return this.unitOfWork.run(async (context) => {
-      const conversation = ConversationEntity.create({
-        kind: ConversationKind.GROUP,
-        title: command.title,
-        createdByUserId: command.callerUserId,
-      });
+      // Insertion order: creator first, then members in request order.
       const uniqueUserIds = new Map<string, Uuid>();
       for (const userId of [command.callerUserId, ...command.memberUserIds]) {
         const normalizedUserId = userId.toLowerCase();
         uniqueUserIds.set(normalizedUserId, normalizedUserId as Uuid);
       }
+      const conversation = ConversationEntity.create({
+        kind: ConversationKind.GROUP,
+        title:
+          command.title ??
+          ConversationTitle.fromMemberNames(
+            [...uniqueUserIds.keys()].map((userId) =>
+              displayNames.get(userId)!,
+            ),
+          ),
+        createdByUserId: command.callerUserId,
+      });
       const members = [...uniqueUserIds.values()].map((userId) =>
         this.createMember(
           conversation.id,

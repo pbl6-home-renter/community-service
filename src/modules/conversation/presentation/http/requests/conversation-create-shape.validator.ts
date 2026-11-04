@@ -9,7 +9,7 @@ interface ConversationCreateShape {
   kind: ConversationKind;
   recipientUserId?: string;
   memberUserIds?: string[];
-  title?: string;
+  title?: string | null;
 }
 
 @ValidatorConstraint({ name: 'conversationCreateShape', async: false })
@@ -20,7 +20,7 @@ export class ConversationCreateShapeValidator implements ValidatorConstraintInte
       return (
         Boolean(request.recipientUserId) &&
         request.memberUserIds === undefined &&
-        request.title === undefined
+        (request.title === undefined || request.title === null)
       );
     }
     if (request.kind === ConversationKind.GROUP) {

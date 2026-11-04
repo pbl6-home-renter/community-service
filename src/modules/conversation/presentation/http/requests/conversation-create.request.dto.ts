@@ -36,7 +36,8 @@ export class ConversationCreateRequestDto {
   @ApiPropertyOptional({
     type: [String],
     uniqueItems: true,
-    description: 'Thành viên ban đầu của group; không cần gồm caller.',
+    description:
+      'Bắt buộc với group; ít nhất 2 user khác caller. Không cần gồm caller.',
   })
   @ValidateIf(
     (request: ConversationCreateRequestDto) =>
@@ -48,13 +49,19 @@ export class ConversationCreateRequestDto {
   @IsUuid('INVALID_UUID', { each: true })
   memberUserIds?: Uuid[];
 
-  @ApiPropertyOptional({ maxLength: 255 })
+  @ApiPropertyOptional({
+    maxLength: 255,
+    nullable: true,
+    description:
+      'Chỉ dùng với group. Bỏ trống, null hoặc chỉ khoảng trắng thì server tạo tên mặc định từ thành viên ban đầu.',
+  })
   @ValidateIf(
-    (request: ConversationCreateRequestDto) => request.title !== undefined,
+    (request: ConversationCreateRequestDto) =>
+      request.title !== undefined && request.title !== null,
   )
   @IsString()
   @MaxLength(255)
-  title?: string;
+  title?: string | null;
 
   static toCommand(
     request: ConversationCreateRequestDto,
@@ -65,9 +72,7 @@ export class ConversationCreateRequestDto {
       callerUserId,
       request.recipientUserId ?? null,
       request.memberUserIds ?? [],
-      request.title === undefined
-        ? null
-        : ConversationTitle.create(request.title),
+      request.title?.trim() ? ConversationTitle.create(request.title) : null,
     );
   }
 }
