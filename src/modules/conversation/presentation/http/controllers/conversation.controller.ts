@@ -406,7 +406,8 @@ export class ConversationController {
   })
   @ApiResponse({
     status: HttpStatus.UNPROCESSABLE_ENTITY,
-    description: 'VALIDATION_FAILED or UNEXPECTED_FIELD',
+    description:
+      'GROUP_MEMBERS_INSUFFICIENT, VALIDATION_FAILED or UNEXPECTED_FIELD',
   })
   @ApiResponse({
     status: HttpStatus.INTERNAL_SERVER_ERROR,
