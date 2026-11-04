@@ -15,11 +15,17 @@ import {
   ConversationPageQuery,
   ConversationPageQueryPort,
 } from '../../application/ports/conversation-page-query.port';
+import { ConversationKind } from '../../domain/enums/conversation-kind.enum';
 import { ConversationMapper } from '../persistence/mappers/conversation.mapper';
 import { ConversationTypeormEntity } from '../persistence/conversation.typeorm-entity';
+import {
+  containsLikePattern,
+  foldVietnameseSql,
+} from './vietnamese-search.sql';
 
 interface ConversationActivityRow {
   conversationId: Uuid;
+  otherMemberDisplayName: string | null;
   unreadCount: string;
   lastMessageId: Uuid | null;
   lastMessageSequence: string | null;
@@ -60,6 +66,65 @@ export class TypeOrmConversationPageQuery implements ConversationPageQueryPort {
         ],
       });
 
+    // A direct conversation is shown only once the viewer can read a message.
+    queryBuilder.andWhere(
+      `(conversation.kind <> :directKind OR EXISTS (
+         SELECT 1 FROM messages AS visible_message
+         WHERE visible_message.conversation_id = conversation.id
+           AND visible_message.is_deleted = false
+           AND (
+             currentMember.status = :activeStatus
+             OR visible_message.sequence <= currentMember.leftSequence
+           )
+       ))`,
+      {
+        directKind: ConversationKind.DIRECT,
+        activeStatus: ConversationMemberStatus.ACTIVE,
+      },
+    );
+
+    if (query.kind !== null) {
+      queryBuilder.andWhere('conversation.kind = :kind', { kind: query.kind });
+    }
+
+    if (query.hasContext === true) {
+      queryBuilder.andWhere('conversation.contextType IS NOT NULL');
+    } else if (query.hasContext === false) {
+      queryBuilder.andWhere('conversation.contextType IS NULL');
+    }
+
+    if (query.otherUserId !== null) {
+      queryBuilder.andWhere('conversation.directPairKey = :directPairKey', {
+        directPairKey: [query.userId, query.otherUserId]
+          .map((userId) => userId.toLowerCase())
+          .sort()
+          .join(':'),
+      });
+    }
+
+    if (query.searchKeyword !== null) {
+      queryBuilder.andWhere(
+        `(
+          (conversation.kind = :groupKind
+            AND ${foldVietnameseSql('conversation.title')} LIKE ${foldVietnameseSql(':namePattern')})
+          OR (conversation.kind = :directKind AND EXISTS (
+            SELECT 1 FROM conversation_members AS search_member
+            WHERE search_member.conversation_id = conversation.id
+              AND search_member.participant_type = :userParticipantType
+              AND search_member.is_deleted = false
+              AND search_member.id <> currentMember.id
+              AND ${foldVietnameseSql('search_member.display_name')} LIKE ${foldVietnameseSql(':namePattern')}
+          ))
+        )`,
+        {
+          groupKind: ConversationKind.GROUP,
+          directKind: ConversationKind.DIRECT,
+          userParticipantType: ConversationParticipantType.USER,
+          namePattern: containsLikePattern(query.searchKeyword),
+        },
+      );
+    }
+
     if (query.contextType !== null && query.contextId !== null) {
       queryBuilder
         .andWhere('conversation.contextType = :contextType', {
@@ -94,6 +159,7 @@ export class TypeOrmConversationPageQuery implements ConversationPageQueryPort {
     const activityRows = (await this.dataSource.query(
       `SELECT
          current_member.conversation_id AS "conversationId",
+         other_member.display_name AS "otherMemberDisplayName",
          COALESCE(unread_messages.unread_count, 0)::text AS "unreadCount",
          latest_message.id AS "lastMessageId",
          latest_message.sequence AS "lastMessageSequence",
@@ -102,6 +168,16 @@ export class TypeOrmConversationPageQuery implements ConversationPageQueryPort {
          latest_message.message_type AS "lastMessageType",
          latest_message.created_at AS "lastMessageSentAt"
        FROM conversation_members AS current_member
+       LEFT JOIN LATERAL (
+         SELECT peer_member.display_name
+         FROM conversation_members AS peer_member
+         WHERE peer_member.conversation_id = current_member.conversation_id
+           AND peer_member.participant_type = 'user'
+           AND peer_member.is_deleted = false
+           AND peer_member.id <> current_member.id
+         ORDER BY peer_member.joined_at ASC, peer_member.id ASC
+         LIMIT 1
+       ) AS other_member ON true
        LEFT JOIN LATERAL (
          SELECT message.id, message.sequence, message.sender_name_snapshot,
                 message.content, message.message_type, message.created_at
@@ -149,6 +225,10 @@ export class TypeOrmConversationPageQuery implements ConversationPageQueryPort {
           contextType: conversation.contextType,
           contextId: conversation.contextId,
           title: conversation.title?.value ?? null,
+          displayName:
+            conversation.kind === ConversationKind.DIRECT
+              ? (activity?.otherMemberDisplayName ?? null)
+              : (conversation.title?.value ?? null),
           avatarMediaId: conversation.avatarMediaId,
           unreadCount: Number(activity?.unreadCount ?? 0),
           lastMessage: activity?.lastMessageId
@@ -158,7 +238,7 @@ export class TypeOrmConversationPageQuery implements ConversationPageQueryPort {
                 senderNameSnapshot: activity.senderNameSnapshot!,
                 content:
                   activity.lastMessageType === MessageType.IMAGE
-                    ? 'Đã gử ảnh'
+                    ? 'Đã gửi ảnh'
                     : activity.lastMessageContent,
                 type: activity.lastMessageType!,
                 sentAt: activity.lastMessageSentAt!,

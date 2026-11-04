@@ -200,7 +200,7 @@ export class ConversationController {
       ConversationGetDetailQuery,
       ConversationDetailQueryResult
     >(new ConversationGetDetailQuery(conversationId, user.id));
-    return ConversationDetailResponseDto.fromResult(result);
+    return ConversationDetailResponseDto.fromResult(result, user.id);
   }
 
   @Delete(':conversationId/members/me')
@@ -453,6 +453,6 @@ export class ConversationController {
       ConversationCreateCommand,
       ConversationCreateResult
     >(ConversationCreateRequestDto.toCommand(request, user.id));
-    return ConversationCreateResponseDto.fromResult(result);
+    return ConversationCreateResponseDto.fromResult(result, user.id);
   }
 }

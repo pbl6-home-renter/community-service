@@ -1,6 +1,7 @@
 import { Inject } from '@nestjs/common';
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { PaginatedResult } from 'shared/application/pagination/paginated-result';
+import { ValidationException } from 'shared/domain/exceptions/validation.exception';
 import { CONVERSATION_DI_TOKEN } from '../../../conversation.di-token';
 import {
   ConversationListReadModel,
@@ -21,6 +22,11 @@ export class ConversationListQueryHandler implements IQueryHandler<
   execute(
     query: ConversationListQuery,
   ): Promise<PaginatedResult<ConversationListReadModel>> {
+    if (query.otherUserId?.toLowerCase() === query.userId.toLowerCase()) {
+      throw new ValidationException(
+        'otherUserId must be a user other than the caller',
+      );
+    }
     return this.pageQuery.findPage(query);
   }
 }
