@@ -4,19 +4,23 @@ import {
   ConversationMemberSnapshot,
   MemberKickedMessagePayloadData,
 } from '../types/message-payload.type';
+import { isValidSystemMessageActorName } from '../validation/system-message-actor.validation';
 
 export class MemberKickedMessagePayload {
   private constructor(
     readonly actorUserId: Uuid,
+    readonly actorDisplayName: string,
     readonly member: Readonly<ConversationMemberSnapshot>,
   ) {}
 
   static create(
     actorUserId: Uuid,
+    actorDisplayName: string,
     member: ConversationMemberSnapshot,
   ): MemberKickedMessagePayload {
     if (
       !isValidUuid(actorUserId) ||
+      !isValidSystemMessageActorName(actorDisplayName) ||
       !isValidUuid(member.userId) ||
       typeof member.displayName !== 'string' ||
       member.displayName.trim().length === 0 ||
@@ -26,6 +30,7 @@ export class MemberKickedMessagePayload {
     }
     return new MemberKickedMessagePayload(
       actorUserId,
+      actorDisplayName,
       Object.freeze({ ...member }),
     );
   }
@@ -34,6 +39,7 @@ export class MemberKickedMessagePayload {
     return {
       action: 'member_kicked',
       actorUserId: this.actorUserId,
+      actorDisplayName: this.actorDisplayName,
       member: { ...this.member },
     };
   }

@@ -5,6 +5,7 @@ export const CONVERSATION_SOCKET_CLIENT_EVENTS = {
 
 export const CONVERSATION_SOCKET_SERVER_EVENTS = {
   MESSAGE_CREATED: 'message:created',
+  MESSAGE_RECEIVED: 'chat:message-received',
   READ_UPDATED: 'conversation:read-updated',
   ACCESS_REVOKED: 'conversation:access-revoked',
   AVAILABLE: 'conversation:available',

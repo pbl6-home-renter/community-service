@@ -1,7 +1,10 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { type Socket } from 'socket.io';
 import { ConversationSocketAccessService } from '../../application/queries/conversation-socket-access.service';
-import { ChatRealtimePort } from '../../application/ports/chat-realtime.port';
+import {
+  ChatMessageReceivedEvent,
+  ChatRealtimePort,
+} from '../../application/ports/chat-realtime.port';
 import { isValidUuid, Uuid } from 'shared/domain/value-objects/uuid.vo';
 import { MessageEntity } from 'modules/message/domain/entities/message.entity';
 import {
@@ -120,6 +123,20 @@ export class ChatGateway implements OnModuleInit, ChatRealtimePort {
         createdAt: message.createdAt,
       },
     );
+  }
+
+  messageReceived(userId: Uuid, event: ChatMessageReceivedEvent): void {
+    this.socket.emit(userRoom(userId), SERVER_EVENTS.MESSAGE_RECEIVED, {
+      messageId: event.messageId,
+      conversationId: event.conversationId,
+      sequence: event.sequence,
+      senderUserId: event.senderUserId,
+      senderName: event.senderName,
+      conversationName: event.conversationName,
+      type: event.type,
+      contentPreview: event.contentPreview,
+      createdAt: event.createdAt,
+    });
   }
 
   readUpdated(

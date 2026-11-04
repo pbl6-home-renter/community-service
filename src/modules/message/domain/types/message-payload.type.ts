@@ -4,6 +4,7 @@ import { Uuid } from 'shared/domain/value-objects/uuid.vo';
 export interface MembersAddedMessagePayloadData {
   action: 'members_added';
   actorUserId: Uuid;
+  actorDisplayName: string;
   members: Array<{
     userId: Uuid;
     displayName: string;
@@ -18,18 +19,21 @@ export interface ConversationMemberSnapshot {
 export interface MemberKickedMessagePayloadData {
   action: 'member_kicked';
   actorUserId: Uuid;
+  actorDisplayName: string;
   member: ConversationMemberSnapshot;
 }
 
 export interface MemberLeftMessagePayloadData {
   action: 'member_left';
   actorUserId: Uuid;
+  actorDisplayName: string;
   member: ConversationMemberSnapshot;
 }
 
 export interface AdminTransferredMessagePayloadData {
   action: 'admin_transferred';
   actorUserId: Uuid;
+  actorDisplayName: string;
   member: ConversationMemberSnapshot;
 }
 
@@ -38,6 +42,7 @@ export type ConversationMemberRoleValue = 'admin' | 'member';
 export interface MemberRoleChangedMessagePayloadData {
   action: 'member_role_changed';
   actorUserId: Uuid;
+  actorDisplayName: string;
   member: ConversationMemberSnapshot;
   oldRole: ConversationMemberRoleValue;
   newRole: ConversationMemberRoleValue;
@@ -46,6 +51,7 @@ export interface MemberRoleChangedMessagePayloadData {
 export interface ConversationTitleChangedMessagePayloadData {
   action: 'conversation_title_changed';
   actorUserId: Uuid;
+  actorDisplayName: string;
   oldTitle: string | null;
   newTitle: string | null;
 }
@@ -53,6 +59,7 @@ export interface ConversationTitleChangedMessagePayloadData {
 export interface ConversationAvatarChangedMessagePayloadData {
   action: 'conversation_avatar_changed';
   actorUserId: Uuid;
+  actorDisplayName: string;
   oldAvatarMediaId: Uuid | null;
   newAvatarMediaId: Uuid | null;
 }

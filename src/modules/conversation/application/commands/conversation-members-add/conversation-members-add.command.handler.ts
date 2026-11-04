@@ -116,6 +116,7 @@ export class ConversationMembersAddCommandHandler implements ICommandHandler<
       );
       const payload = MembersAddedMessagePayload.create({
         actorUserId: command.callerUserId,
+        actorDisplayName: caller.displayName,
         members: addedMembers.map((member, index) => ({
           userId: normalizedUserIds[index],
           displayName: member.displayName,

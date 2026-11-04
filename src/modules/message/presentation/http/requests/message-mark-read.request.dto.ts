@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsNotEmpty, Max, Min } from 'class-validator';
+import { IsNotEmpty, IsString, Matches } from 'class-validator';
 import { Uuid } from 'shared/domain/value-objects/uuid.vo';
 import { IsUuid } from 'shared/presentation/validators/is-uuid.decorator';
 import { MessageMarkReadCommand } from '../../../application/commands/message-mark-read/message-mark-read.command';
@@ -11,14 +11,13 @@ export class MessageMarkReadRequestDto {
   conversationId: Uuid;
 
   @ApiProperty({
-    minimum: 0,
-    maximum: Number.MAX_SAFE_INTEGER,
-    format: 'int64',
+    type: String,
+    pattern: '^(0|[1-9]\\d*)$',
+    example: '42',
   })
-  @IsInt()
-  @Min(0)
-  @Max(Number.MAX_SAFE_INTEGER)
-  lastReadSequence: number;
+  @IsString()
+  @Matches(/^(0|[1-9]\d*)$/)
+  lastReadSequence: string;
 
   static toCommand(
     request: MessageMarkReadRequestDto,
@@ -27,7 +26,7 @@ export class MessageMarkReadRequestDto {
     return new MessageMarkReadCommand(
       request.conversationId,
       actorUserId,
-      String(request.lastReadSequence),
+      request.lastReadSequence,
     );
   }
 }

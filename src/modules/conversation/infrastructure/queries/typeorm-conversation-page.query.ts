@@ -9,7 +9,7 @@ import { ConversationParticipantType } from 'modules/conversation-member/domain/
 import { ConversationMemberTypeormEntity } from 'modules/conversation-member/infrastructure/persistence/conversation-member.typeorm-entity';
 import { UNREAD_COUNTED_MESSAGE_TYPES } from 'modules/message/domain/constants/unread-counted-message-types.constant';
 import { MessageType } from 'modules/message/domain/enums/message-type.enum';
-import { MessageTypeormEntity } from 'modules/message/infrastructure/persistence/message.typeorm-entity';
+import { MessagePayload } from 'modules/message/domain/types/message-payload.type';
 import {
   ConversationListReadModel,
   ConversationPageQuery,
@@ -32,6 +32,7 @@ interface ConversationActivityRow {
   senderNameSnapshot: string | null;
   lastMessageContent: string | null;
   lastMessageType: MessageType | null;
+  lastMessagePayload: MessagePayload | null;
   lastMessageSentAt: Date | null;
 }
 
@@ -41,7 +42,7 @@ export class TypeOrmConversationPageQuery implements ConversationPageQueryPort {
     @InjectRepository(ConversationTypeormEntity)
     private readonly conversations: Repository<ConversationTypeormEntity>,
     private readonly dataSource: DataSource,
-  ) {}
+  ) { }
 
   async findPage(
     query: ConversationPageQuery,
@@ -70,11 +71,11 @@ export class TypeOrmConversationPageQuery implements ConversationPageQueryPort {
     queryBuilder.andWhere(
       `(conversation.kind <> :directKind OR EXISTS (
          SELECT 1 FROM messages AS visible_message
-         WHERE visible_message.conversation_id = conversation.id
+         WHERE visible_message.conversation_id = "conversation"."id"
            AND visible_message.is_deleted = false
            AND (
-             currentMember.status = :activeStatus
-             OR visible_message.sequence <= currentMember.leftSequence
+             "currentMember"."status" = :activeStatus
+             OR visible_message.sequence <= "currentMember"."left_sequence"
            )
        ))`,
       {
@@ -109,10 +110,10 @@ export class TypeOrmConversationPageQuery implements ConversationPageQueryPort {
             AND ${foldVietnameseSql('conversation.title')} LIKE ${foldVietnameseSql(':namePattern')})
           OR (conversation.kind = :directKind AND EXISTS (
             SELECT 1 FROM conversation_members AS search_member
-            WHERE search_member.conversation_id = conversation.id
+            WHERE search_member.conversation_id = "conversation"."id"
               AND search_member.participant_type = :userParticipantType
               AND search_member.is_deleted = false
-              AND search_member.id <> currentMember.id
+              AND search_member.id <> "currentMember"."id"
               AND ${foldVietnameseSql('search_member.display_name')} LIKE ${foldVietnameseSql(':namePattern')}
           ))
         )`,
@@ -135,20 +136,24 @@ export class TypeOrmConversationPageQuery implements ConversationPageQueryPort {
         });
     }
 
-    const latestActivity = queryBuilder
-      .subQuery()
-      .select('MAX(lastActivityMessage.createdAt)')
-      .from(MessageTypeormEntity, 'lastActivityMessage')
-      .where('lastActivityMessage.conversationId = conversation.id')
-      .andWhere('lastActivityMessage.isDeleted = false')
-      .andWhere(
-        '(currentMember.status = :activeStatus OR lastActivityMessage.sequence <= currentMember.leftSequence)',
-      )
-      .getQuery();
-    const activityOrder = `COALESCE(${latestActivity}, conversation.createdAt)`;
+    // Written as raw SQL with quoted outer aliases: TypeORM does not resolve
+    // `currentMember.*` / `conversation.*` property paths inside select
+    // expressions, and Postgres would fold the unquoted camelCase alias.
+    const latestActivity = `COALESCE((
+      SELECT MAX(last_activity_message.created_at)
+      FROM messages AS last_activity_message
+      WHERE last_activity_message.conversation_id = "conversation"."id"
+        AND last_activity_message.is_deleted = false
+        AND (
+          "currentMember"."status" = :activeStatus
+          OR last_activity_message.sequence <= "currentMember"."left_sequence"
+        )
+    ), "conversation"."created_at")`;
+    const activityOrderAlias = 'latest_activity_at';
     queryBuilder
-      .addSelect(activityOrder, 'latestActivityAt')
-      .orderBy(activityOrder, 'DESC')
+      .addSelect(latestActivity, activityOrderAlias)
+      .setParameter('activeStatus', ConversationMemberStatus.ACTIVE)
+      .orderBy(activityOrderAlias, 'DESC')
       .addOrderBy('conversation.id', 'DESC');
 
     const page = await TypeOrmPaginator.offset(queryBuilder, query).paginate(
@@ -169,6 +174,7 @@ export class TypeOrmConversationPageQuery implements ConversationPageQueryPort {
          latest_message.sender_name_snapshot AS "senderNameSnapshot",
          latest_message.content AS "lastMessageContent",
          latest_message.message_type AS "lastMessageType",
+         latest_message.payload AS "lastMessagePayload",
          latest_message.created_at AS "lastMessageSentAt"
        FROM conversation_members AS current_member
        LEFT JOIN LATERAL (
@@ -183,7 +189,7 @@ export class TypeOrmConversationPageQuery implements ConversationPageQueryPort {
        ) AS other_member ON true
        LEFT JOIN LATERAL (
          SELECT message.id, message.sequence, message.sender_name_snapshot,
-                message.content, message.message_type, message.created_at
+                message.content, message.message_type, message.payload, message.created_at
          FROM messages AS message
          WHERE message.conversation_id = current_member.conversation_id
            AND message.is_deleted = false
@@ -236,16 +242,17 @@ export class TypeOrmConversationPageQuery implements ConversationPageQueryPort {
           unreadCount: Number(activity?.unreadCount ?? 0),
           lastMessage: activity?.lastMessageId
             ? {
-                id: activity.lastMessageId,
-                sequence: activity.lastMessageSequence!,
-                senderNameSnapshot: activity.senderNameSnapshot!,
-                content:
-                  activity.lastMessageType === MessageType.IMAGE
-                    ? 'Đã gửi ảnh'
-                    : activity.lastMessageContent,
-                type: activity.lastMessageType!,
-                sentAt: activity.lastMessageSentAt!,
-              }
+              id: activity.lastMessageId,
+              sequence: activity.lastMessageSequence!,
+              senderNameSnapshot: activity.senderNameSnapshot!,
+              content:
+                activity.lastMessageType === MessageType.IMAGE
+                  ? 'Đã gửi ảnh'
+                  : activity.lastMessageContent,
+              type: activity.lastMessageType!,
+              payload: activity.lastMessagePayload,
+              sentAt: activity.lastMessageSentAt!,
+            }
             : null,
         };
       }),

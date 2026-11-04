@@ -3,6 +3,7 @@ import { Uuid } from 'shared/domain/value-objects/uuid.vo';
 import { ConversationContextType } from '../../domain/enums/conversation-context-type.enum';
 import { ConversationKind } from '../../domain/enums/conversation-kind.enum';
 import { MessageType } from 'modules/message/domain/enums/message-type.enum';
+import { MessagePayload } from 'modules/message/domain/types/message-payload.type';
 
 export interface ConversationPageQuery {
   userId: Uuid;
@@ -25,6 +26,7 @@ export interface ConversationLastMessageReadModel {
   senderNameSnapshot: string;
   content: string | null;
   type: MessageType;
+  payload: MessagePayload | null;
   sentAt: Date;
 }
 
