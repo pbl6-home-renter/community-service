@@ -5,6 +5,7 @@ import { TransactionContext } from 'shared/domain/repositories/transaction-conte
 import { Uuid } from 'shared/domain/value-objects/uuid.vo';
 import { withTransaction } from 'shared/infrastructure/database/transaction/typeorm-transaction-context';
 import { TypeOrmTransactionContext } from 'shared/infrastructure/database/transaction/typeorm-transaction-context';
+import { UNREAD_COUNTED_MESSAGE_TYPES } from '../../domain/constants/unread-counted-message-types.constant';
 import { MessageEntity } from '../../domain/entities/message.entity';
 import { MessageRepository } from '../../domain/repositories/message.repository';
 import { MessageMapper } from './mappers/message.mapper';
@@ -138,6 +139,9 @@ export class TypeOrmMessageRepository implements MessageRepository {
       .where('message.conversationId = :conversationId', { conversationId })
       .andWhere('message.sequence > :afterSequence', { afterSequence })
       .andWhere('message.senderMemberId != :memberId', { memberId })
+      .andWhere('message.type IN (:...unreadTypes)', {
+        unreadTypes: [...UNREAD_COUNTED_MESSAGE_TYPES],
+      })
       .andWhere('message.isDeleted = false');
     if (throughSequence !== null) {
       query.andWhere('message.sequence <= :throughSequence', {

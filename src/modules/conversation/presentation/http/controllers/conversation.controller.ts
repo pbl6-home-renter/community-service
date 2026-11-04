@@ -53,6 +53,8 @@ import { ConversationEntity } from '../../../domain/entities/conversation.entity
 import { ConversationMetadataUpdateCommand } from '../../../application/commands/conversation-metadata-update/conversation-metadata-update.command';
 import { ConversationMetadataUpdateRequestDto } from '../requests/conversation-metadata-update.request.dto';
 import { ConversationMetadataUpdateResponseDto } from '../responses/conversation-metadata-update.response.dto';
+import { ConversationUnreadSummaryQuery } from '../../../application/queries/conversation-unread-summary/conversation-unread-summary.query';
+import { ConversationUnreadSummaryResponseDto } from '../responses/conversation-unread-summary.response.dto';
 
 @ApiTags('Chat')
 @ApiBearerAuth()
@@ -139,6 +141,36 @@ export class ConversationController {
       data: result.data.map(ConversationListResponseDto.fromReadModel),
       pagination: result.pagination,
     });
+  }
+
+  // Static route: must stay declared before `:conversationId`.
+  @Get('unread-summary')
+  @HttpCode(HttpStatus.OK)
+  @ResponseCode(
+    ConversationResponseCodeConstant.CONVERSATION_UNREAD_SUMMARY_FETCHED,
+  )
+  @ApiOperation({
+    operationId: 'getConversationsUnreadSummary',
+    summary: 'Tổng tin nhắn chưa đọc của người gọi',
+  })
+  @ApiSuccessResponse({
+    code: ConversationResponseCodeConstant.CONVERSATION_UNREAD_SUMMARY_FETCHED,
+    dataDto: ConversationUnreadSummaryResponseDto,
+  })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'UNAUTHORIZED' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'FORBIDDEN' })
+  @ApiResponse({
+    status: HttpStatus.SERVICE_UNAVAILABLE,
+    description: 'Auth service unavailable',
+  })
+  async getUnreadSummary(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<ConversationUnreadSummaryResponseDto> {
+    const totalUnreadCount = await this.queryBus.execute<
+      ConversationUnreadSummaryQuery,
+      number
+    >(new ConversationUnreadSummaryQuery(user.id));
+    return ConversationUnreadSummaryResponseDto.fromCount(totalUnreadCount);
   }
 
   @Get(':conversationId')
