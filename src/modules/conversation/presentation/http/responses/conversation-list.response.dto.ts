@@ -32,6 +32,9 @@ export class ConversationListResponseDto {
   @ApiPropertyOptional({ format: 'uuid', nullable: true })
   avatarMediaId: Uuid | null;
 
+  @ApiPropertyOptional({ nullable: true, description: 'Identity media URL for display.' })
+  avatarUrl: string | null;
+
   @ApiProperty({ minimum: 0 })
   unreadCount: number;
 
@@ -52,6 +55,9 @@ export class ConversationListResponseDto {
     response.title = conversation.title;
     response.displayName = conversation.displayName;
     response.avatarMediaId = conversation.avatarMediaId;
+    response.avatarUrl = conversation.avatarMediaId
+      ? `/api/v1/media/${conversation.avatarMediaId}`
+      : null;
     response.unreadCount = conversation.unreadCount;
     response.lastMessage = conversation.lastMessage
       ? ConversationLastMessageResponseDto.fromReadModel(

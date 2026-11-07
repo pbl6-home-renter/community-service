@@ -33,6 +33,9 @@ export class ConversationDetailResponseDto {
   @ApiProperty({ format: 'uuid', nullable: true })
   avatarMediaId: Uuid | null;
 
+  @ApiProperty({ nullable: true, description: 'Identity media URL for display.' })
+  avatarUrl: string | null;
+
   @ApiProperty({ minimum: 0 })
   unreadCount: number;
 
@@ -61,6 +64,9 @@ export class ConversationDetailResponseDto {
           )?.displayName ?? null)
         : response.title;
     response.avatarMediaId = result.conversation.avatarMediaId;
+    response.avatarUrl = result.conversation.avatarMediaId
+      ? `/api/v1/media/${result.conversation.avatarMediaId}`
+      : null;
     response.unreadCount = result.unreadCount;
     response.members = result.members.map(
       ConversationMemberResponseDto.fromDomain,

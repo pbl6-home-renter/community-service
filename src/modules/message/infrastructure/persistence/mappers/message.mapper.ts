@@ -12,7 +12,7 @@ export class MessageMapper {
       clientMessageId: raw.clientMessageId,
       type: raw.type as MessageType,
       content: raw.content,
-      mediaId: raw.mediaId,
+      mediaId: raw.mediaIds[0] ?? null,
       payload: raw.payload,
       sequence: raw.sequence,
       createdAt: raw.createdAt,
@@ -30,7 +30,7 @@ export class MessageMapper {
     raw.clientMessageId = entity.clientMessageId;
     raw.type = entity.type;
     raw.content = entity.content;
-    raw.mediaId = entity.mediaId;
+    raw.mediaIds = entity.mediaId ? [entity.mediaId] : [];
     raw.payload = entity.payload;
     raw.sequence = entity.sequence;
     raw.createdAt = entity.createdAt;

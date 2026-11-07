@@ -35,6 +35,12 @@ export class MessageListResponseDto {
   @ApiProperty({ format: 'uuid', nullable: true })
   mediaId: Uuid | null;
 
+  @ApiProperty({
+    nullable: true,
+    description: 'Identity media URL for display.',
+  })
+  mediaUrl: string | null;
+
   @ApiProperty({ nullable: true, type: Object })
   payload: MessagePayload | null;
 
@@ -42,6 +48,9 @@ export class MessageListResponseDto {
   createdAt: Date;
 
   static fromReadModel(model: MessageReadModel): MessageListResponseDto {
-    return Object.assign(new MessageListResponseDto(), model);
+    return Object.assign(new MessageListResponseDto(), model, {
+      mediaId: model.mediaId,
+      mediaUrl: model.mediaId ? `/api/v1/media/${model.mediaId}` : null,
+    });
   }
 }

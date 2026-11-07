@@ -26,6 +26,7 @@ import { MessagePayload } from '../../domain/types/message-payload.type';
   'CHK_messages_type',
   "message_type IN ('text', 'image', 'system', 'bot')",
 )
+@Check('CHK_messages_single_media', 'cardinality(media_ids) <= 1')
 export class MessageTypeormEntity extends AbstractEntity {
   @Column({ type: 'uuid' })
   conversationId: Uuid;
@@ -45,8 +46,8 @@ export class MessageTypeormEntity extends AbstractEntity {
   @Column({ type: 'varchar', length: 4000, nullable: true })
   content: string | null;
 
-  @Column({ type: 'uuid', nullable: true })
-  mediaId: Uuid | null;
+  @Column({ type: 'uuid', array: true, default: () => "'{}'" })
+  mediaIds: Uuid[];
 
   @Column({ type: 'jsonb', nullable: true })
   payload: MessagePayload | null;

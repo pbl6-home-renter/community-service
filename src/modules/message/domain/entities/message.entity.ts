@@ -4,8 +4,11 @@ import { Uuid, generateUuid } from 'shared/domain/value-objects/uuid.vo';
 import { MessageProps } from './message.props';
 import { MessageType } from '../enums/message-type.enum';
 import { MessagePayload } from '../types/message-payload.type';
+import { MediaReference } from 'modules/media/domain/value-objects/media-reference.vo';
 
 export class MessageEntity extends AggregateRoot {
+  private readonly _media: MediaReference | null;
+
   private constructor(
     id: Uuid,
     readonly conversationId: Uuid,
@@ -14,7 +17,7 @@ export class MessageEntity extends AggregateRoot {
     readonly clientMessageId: Uuid | null,
     readonly type: MessageType,
     readonly content: string | null,
-    readonly mediaId: Uuid | null,
+    mediaId: Uuid | null,
     readonly payload: MessagePayload | null,
     readonly sequence: string,
     createdAt: Date,
@@ -22,6 +25,11 @@ export class MessageEntity extends AggregateRoot {
     isDeleted: boolean,
   ) {
     super(id, createdAt, updatedAt, isDeleted);
+    this._media = mediaId === null ? null : MediaReference.create(mediaId);
+  }
+
+  get mediaId(): Uuid | null {
+    return this._media?.mediaId ?? null;
   }
 
   static create(props: MessageProps): MessageEntity {

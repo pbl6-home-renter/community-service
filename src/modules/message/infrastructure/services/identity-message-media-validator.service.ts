@@ -33,7 +33,6 @@ export class IdentityMessageMediaValidatorService implements MessageMediaValidat
         'Chat media validation failed',
       );
     }
-
     if (!result.valid) throw new MessageContentInvalidException();
   }
 }

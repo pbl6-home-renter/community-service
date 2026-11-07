@@ -4,8 +4,11 @@ import { ConversationContextType } from '../enums/conversation-context-type.enum
 import { ConversationKind } from '../enums/conversation-kind.enum';
 import { ConversationTitle } from '../value-objects/conversation-title.vo';
 import { ConversationProps } from './conversation.props';
+import { MediaReference } from 'modules/media/domain/value-objects/media-reference.vo';
 
 export class ConversationEntity extends AggregateRoot {
+  private readonly _avatar: MediaReference | null;
+
   private constructor(
     id: Uuid,
     readonly kind: ConversationKind,
@@ -13,13 +16,18 @@ export class ConversationEntity extends AggregateRoot {
     readonly contextId: Uuid | null,
     readonly directPairKey: string | null,
     readonly title: ConversationTitle | null,
-    readonly avatarMediaId: Uuid | null,
+    avatarMediaId: Uuid | null,
     readonly createdByUserId: Uuid | null,
     createdAt: Date,
     updatedAt: Date,
     isDeleted: boolean,
   ) {
     super(id, createdAt, updatedAt, isDeleted);
+    this._avatar = avatarMediaId === null ? null : MediaReference.create(avatarMediaId);
+  }
+
+  get avatarMediaId(): Uuid | null {
+    return this._avatar?.mediaId ?? null;
   }
 
   static create(props: ConversationProps): ConversationEntity {

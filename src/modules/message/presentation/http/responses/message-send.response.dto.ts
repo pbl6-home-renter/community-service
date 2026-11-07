@@ -22,6 +22,12 @@ export class MessageSendResponseDto {
   @ApiProperty({ format: 'uuid', nullable: true })
   mediaId: Uuid | null;
 
+  @ApiProperty({
+    nullable: true,
+    description: 'Identity media URL for display.',
+  })
+  mediaUrl: string | null;
+
   @ApiProperty({ minimum: 1, format: 'int64' })
   sequence: string;
 
@@ -39,6 +45,9 @@ export class MessageSendResponseDto {
     response.type = message.type;
     response.content = message.content;
     response.mediaId = message.mediaId;
+    response.mediaUrl = message.mediaId
+      ? `/api/v1/media/${message.mediaId}`
+      : null;
     response.sequence = message.sequence;
     response.clientMessageId = message.clientMessageId;
     response.createdAt = message.createdAt;

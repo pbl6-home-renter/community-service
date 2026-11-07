@@ -97,7 +97,7 @@ export class TypeOrmMessagePageQuery implements MessagePageQueryPort {
           clientMessageId: message.clientMessageId,
           type: message.type,
           content: message.content,
-          mediaId: message.mediaId,
+          mediaId: message.mediaIds[0] ?? null,
           payload: message.payload,
           createdAt: message.createdAt,
         };

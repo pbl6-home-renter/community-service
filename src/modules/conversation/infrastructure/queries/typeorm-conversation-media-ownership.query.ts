@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Uuid } from 'shared/domain/value-objects/uuid.vo';
-import { Repository } from 'typeorm';
+import { ArrayContains, Repository } from 'typeorm';
 import { ConversationMemberStatus } from 'modules/conversation-member/domain/enums/conversation-member-status.enum';
 import { ConversationParticipantType } from 'modules/conversation-member/domain/enums/conversation-participant-type.enum';
 import { ConversationMemberTypeormEntity } from 'modules/conversation-member/infrastructure/persistence/conversation-member.typeorm-entity';
@@ -40,7 +40,11 @@ export class TypeOrmConversationMediaOwnershipQuery implements ConversationMedia
     let authorized = member?.status === ConversationMemberStatus.ACTIVE;
     if (mediaId && member) {
       const messages = await this.messages.find({
-        where: { conversationId, mediaId, isDeleted: false },
+        where: {
+          conversationId,
+          mediaIds: ArrayContains([mediaId]),
+          isDeleted: false,
+        },
         select: { sequence: true },
       });
       authorized = messages.some(
