@@ -36,6 +36,8 @@ export class LoggingExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(LoggingExceptionFilter.name);
 
   catch(exception: unknown, host: ArgumentsHost): void {
+    if (host.getType() !== 'http') throw exception;
+
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
