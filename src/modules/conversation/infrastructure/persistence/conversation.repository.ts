@@ -9,6 +9,7 @@ import { ConversationEntity } from '../../domain/entities/conversation.entity';
 import { ConversationRepository } from '../../domain/repositories/conversation.repository';
 import { ConversationMapper } from './mappers/conversation.mapper';
 import { ConversationTypeormEntity } from './conversation.typeorm-entity';
+import { ConversationContextType } from '../../domain/enums/conversation-context-type.enum';
 
 @Injectable()
 export class TypeOrmConversationRepository implements ConversationRepository {
@@ -16,6 +17,18 @@ export class TypeOrmConversationRepository implements ConversationRepository {
     @InjectRepository(ConversationTypeormEntity)
     private readonly repository: Repository<ConversationTypeormEntity>,
   ) {}
+
+  async findByContextForUpdate(
+    contextType: ConversationContextType,
+    contextId: Uuid,
+    context: TransactionContext,
+  ): Promise<ConversationEntity | null> {
+    const raw = await withTransaction(this.repository, context).findOne({
+      where: { contextType, contextId, isDeleted: false },
+      lock: { mode: 'pessimistic_write' },
+    });
+    return raw ? ConversationMapper.toDomain(raw) : null;
+  }
 
   async save(
     conversation: ConversationEntity,
