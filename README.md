@@ -362,7 +362,7 @@ diff -rq --strip-trailing-cr boilerplate/src/shared <Service>/src/shared   # ph�
 | `npm run outbox:requeue -- <message-id>` | Đưa message outbox `FAILED` về hàng đợi (`outbox:requeue:prod` trong container) |
 
 > [!NOTE]
-> Repo hiện **chưa có test script**. Kiểm tra thay đổi bằng `npm run build`, `npm run lint`, `npm run format:check` và các lệnh dependency rule. Husky + lint-staged tự chạy `oxlint --fix` và `prettier --write` trên file staged.
+> Unit test chạy bằng `npm test`; CI dùng `npm run test:ci` (Jest + coverage). Test domain/application đặt ngoài `src/` trong `test/unit/`; không cần database hay message broker.
 
 ## Cấu trúc thư mục
 
