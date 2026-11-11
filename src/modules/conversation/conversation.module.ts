@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { InboxModule } from 'modules/inbox/inbox.module';
 import { ContractContextSubscriber } from './presentation/messaging/contract-context.subscriber';
+import { ContractContextApplyCommandHandler } from './application/commands/contract-context-apply/contract-context-apply.command.handler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CqrsModule } from '@nestjs/cqrs';
 import { ConversationMemberModule } from 'modules/conversation-member/conversation-member.module';
@@ -18,6 +19,8 @@ import { TypeOrmConversationDetailQuery } from './infrastructure/queries/typeorm
 import { TypeOrmConversationPageQuery } from './infrastructure/queries/typeorm-conversation-page.query';
 import { CONVERSATION_DI_TOKEN } from './conversation.di-token';
 import { ConversationTypeormEntity } from './infrastructure/persistence/conversation.typeorm-entity';
+import { ContractContextEventTypeormEntity } from './infrastructure/persistence/contract-context-event.typeorm-entity';
+import { TypeOrmContractContextEventStore } from './infrastructure/persistence/contract-context-event.store';
 import { TypeOrmConversationRepository } from './infrastructure/persistence/conversation.repository';
 import { ConversationMemberTypeormEntity } from 'modules/conversation-member/infrastructure/persistence/conversation-member.typeorm-entity';
 import { ConversationController } from './presentation/http/controllers/conversation.controller';
@@ -41,6 +44,7 @@ import { PushDeviceModule } from 'modules/push-device/push-device.module';
 import { ChatMessagePushNotifier } from 'modules/message/application/services/chat-message-push-notifier';
 
 const commandHandlers = [
+  ContractContextApplyCommandHandler,
   ConversationCreateCommandHandler,
   ConversationMembersAddCommandHandler,
   ConversationMemberDepartureCommandHandler,
@@ -67,6 +71,7 @@ const queryHandlers = [
     PushDeviceModule,
     TypeOrmModule.forFeature([
       ConversationTypeormEntity,
+      ContractContextEventTypeormEntity,
       ConversationMemberTypeormEntity,
       MessageTypeormEntity,
     ]),
@@ -78,6 +83,7 @@ const queryHandlers = [
   ],
   providers: [
     ContractContextSubscriber,
+    TypeOrmContractContextEventStore,
     ...commandHandlers,
     ...queryHandlers,
     ConversationSocketAccessService,
@@ -92,6 +98,10 @@ const queryHandlers = [
     {
       provide: CONVERSATION_DI_TOKEN.CHAT_REALTIME,
       useExisting: ChatGateway,
+    },
+    {
+      provide: CONVERSATION_DI_TOKEN.CONTEXT_EVENT_STORE,
+      useExisting: TypeOrmContractContextEventStore,
     },
     {
       provide: CONVERSATION_DI_TOKEN.USER_LOOKUP,

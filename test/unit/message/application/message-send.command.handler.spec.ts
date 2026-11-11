@@ -73,6 +73,7 @@ function createMessageRepository(
     findByIdempotencyKey: jest.fn(async () => existing),
     nextSequenceForUpdate: jest.fn(async () => '17'),
     latestSequenceForUpdate: jest.fn(async () => '16'),
+    latestSequenceAtOrBefore: jest.fn(async () => '16'),
     hasSequenceForConversation: jest.fn(async () => false),
     countUnread: jest.fn(async () => 0),
   };

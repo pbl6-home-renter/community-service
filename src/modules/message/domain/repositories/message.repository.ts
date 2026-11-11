@@ -24,6 +24,12 @@ export interface MessageRepository extends BaseRepository<MessageEntity> {
     context: TransactionContext,
   ): Promise<string>;
 
+  latestSequenceAtOrBefore(
+    conversationId: Uuid,
+    occurredAt: Date,
+    context: TransactionContext,
+  ): Promise<string>;
+
   hasSequenceForConversation(
     conversationId: Uuid,
     sequence: string,
