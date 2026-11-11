@@ -29,5 +29,5 @@ Tài liệu kỹ thuật (boilerplate): [`docs/architecture.md`](docs/architectu
 8. **Lỗi:** không `try/catch` chỉ để log/ném lại — filter toàn cục lo. Chỉ catch để đổi lỗi đã biết sang domain exception hoặc fallback dữ liệu hiển thị.
 9. **Liên service:** ghi qua event (outbox → RabbitMQ → inbox); đọc qua internal HTTP `GET`; kiểu của peer khai báo lại; endpoint nội bộ `@InternalOnly()` dưới `internal/`.
 10. **Migration** chỉ sinh bằng `npm run migration:generate -- src/database/migrations/<Name>`, xoá dòng không liên quan; không viết tay.
-11. **Phạm vi:** không sửa `src/shared/` trong service (sửa ở boilerplate rồi copy); không đụng file ngoài issue; không viết `*.spec.ts`.
+11. **Phạm vi:** không sửa `src/shared/` trong service (sửa ở boilerplate rồi copy); không đụng file ngoài issue. Unit test đặt ngoài `src/` tại `test/unit/<context>/<domain|application>/*.spec.ts`; không đưa test lên production build.
 12. **Kiểm tra:** `npm run build`, `npm run lint` sạch; thử tay bằng Apidog; cập nhật `api-docs` (`x-apidog-status`, sequence diagram) và PR ghi `Closes pbl6-home-renter/docs#<n>`.

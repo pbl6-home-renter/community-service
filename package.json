@@ -10,14 +10,18 @@
   },
   "scripts": {
     "build": "nest build",
-    "format": "prettier --write \"src/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.ts\"",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:ci": "jest --ci --runInBand --coverage",
+    "test:coverage": "jest --coverage",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
-    "lint": "oxlint src/",
-    "lint:fix": "oxlint --fix src/",
+    "lint": "oxlint src/ test/",
+    "lint:fix": "oxlint --fix src/ test/",
     "typeorm": "typeorm-ts-node-commonjs -d src/shared/infrastructure/database/data-source.ts",
     "migration:generate": "npm run typeorm -- migration:generate",
     "migration:create": "npm run typeorm -- migration:create",
@@ -32,6 +36,10 @@
   },
   "lint-staged": {
     "src/**/*.{ts,js}": [
+      "oxlint --fix",
+      "prettier --write"
+    ],
+    "test/**/*.{ts,js}": [
       "oxlint --fix",
       "prettier --write"
     ]
@@ -75,17 +83,20 @@
     "@types/bcrypt": "^6.0.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.0",
+    "@types/jest": "^30.0.0",
     "@types/node": "^24.0.0",
     "@types/nodemailer": "^8.0.2",
     "@types/passport": "^1.0.17",
     "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^7.0.0",
     "husky": "^9.1.7",
+    "jest": "^30.5.2",
     "lint-staged": "^17.6.0",
     "oxlint": "^1.58.0",
     "oxlint-tsgolint": "^7.0.2001",
     "prettier": "^3.4.2",
     "source-map-support": "^0.5.21",
+    "ts-jest": "^29.4.15",
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.2"
