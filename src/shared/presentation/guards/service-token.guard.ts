@@ -27,6 +27,8 @@ export class ServiceTokenGuard implements CanActivate {
   }
 
   canActivate(context: ExecutionContext): boolean {
+    if (context.getType() !== 'http') return true;
+
     const isInternal = this.reflector.getAllAndOverride<boolean>(
       AuthMetadataKeys.INTERNAL_ONLY,
       [context.getHandler(), context.getClass()],

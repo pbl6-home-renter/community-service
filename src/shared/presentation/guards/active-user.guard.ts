@@ -17,6 +17,8 @@ export class ActiveUserGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
+    if (context.getType() !== 'http') return true;
+
     const user = context.switchToHttp().getRequest<AuthenticatedRequest>().user;
     if (user?.status !== UserStatus.LOCKED) return true;
 
