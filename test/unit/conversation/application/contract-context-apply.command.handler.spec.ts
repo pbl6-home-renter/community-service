@@ -5,6 +5,7 @@ import {
   ContractContextEventValidator,
   ContractContextIntegrationEvent,
 } from 'modules/conversation/presentation/messaging/contract-context.integration-event';
+import { ContractContextEventHandler } from 'modules/conversation/presentation/messaging/contract-context-event.handler';
 import { ContractContextSubscriber } from 'modules/conversation/presentation/messaging/contract-context.subscriber';
 import { ContractContextEventStore } from 'modules/conversation/application/ports/contract-context-event-store.port';
 import { ConversationUserLookup } from 'modules/conversation/application/ports/conversation-user-lookup.port';
@@ -199,10 +200,7 @@ function setup() {
     ),
   } as unknown as CommandBus;
   const subscriber = new ContractContextSubscriber(
-    commandBus,
-    inbox,
-    unitOfWork,
-    realtime,
+    new ContractContextEventHandler(commandBus, inbox, unitOfWork, realtime),
   );
   return {
     subscriber,
