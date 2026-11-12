@@ -14,6 +14,7 @@ export class MessageMapper {
       content: raw.content,
       mediaId: raw.mediaIds[0] ?? null,
       payload: raw.payload,
+      replyToMessageId: raw.replyToMessageId,
       sequence: raw.sequence,
       createdAt: raw.createdAt,
       updatedAt: raw.updatedAt,
@@ -32,6 +33,7 @@ export class MessageMapper {
     raw.content = entity.content;
     raw.mediaIds = entity.mediaId ? [entity.mediaId] : [];
     raw.payload = entity.payload;
+    raw.replyToMessageId = entity.replyToMessageId;
     raw.sequence = entity.sequence;
     raw.createdAt = entity.createdAt;
     raw.updatedAt = entity.updatedAt;

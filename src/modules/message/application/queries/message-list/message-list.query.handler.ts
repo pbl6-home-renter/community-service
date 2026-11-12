@@ -44,15 +44,22 @@ export class MessageListQueryHandler implements IQueryHandler<
     });
     if (!member) throw new ConversationForbiddenException();
 
+    const visibleUpTo =
+      member.status === ConversationMemberStatus.READ_ONLY
+        ? member.leftSequence
+        : null;
     return this.pageQuery.findPage({
       conversationId: query.conversationId,
       actorUserId: query.actorUserId,
       cursor: query.cursor,
       pageSize: query.pageSize,
-      maxSequence:
-        member.status === ConversationMemberStatus.READ_ONLY
-          ? member.leftSequence
-          : null,
+      maxSequence: lowerSequence(query.maxSequence, visibleUpTo),
     });
   }
+}
+
+function lowerSequence(a: string | null, b: string | null): string | null {
+  if (a === null) return b;
+  if (b === null) return a;
+  return BigInt(a) <= BigInt(b) ? a : b;
 }

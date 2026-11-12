@@ -1,7 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Uuid } from 'shared/domain/value-objects/uuid.vo';
-import { MessageEntity } from '../../../domain/entities/message.entity';
 import { MessageType } from '../../../domain/enums/message-type.enum';
+import { MessageSendResult } from '../../../application/commands/message-send/message-send.result';
+import { MessageReplyReferenceResponseDto } from './message-reply-reference.response.dto';
 
 export class MessageSendResponseDto {
   @ApiProperty({ format: 'uuid' })
@@ -34,10 +35,16 @@ export class MessageSendResponseDto {
   @ApiProperty({ format: 'uuid', nullable: true })
   clientMessageId: Uuid | null;
 
+  @ApiProperty({ type: MessageReplyReferenceResponseDto, nullable: true })
+  replyTo: MessageReplyReferenceResponseDto | null;
+
   @ApiProperty({ format: 'date-time' })
   createdAt: Date;
 
-  static fromDomain(message: MessageEntity): MessageSendResponseDto {
+  static fromResult({
+    message,
+    replyTo,
+  }: MessageSendResult): MessageSendResponseDto {
     const response = new MessageSendResponseDto();
     response.id = message.id;
     response.conversationId = message.conversationId;
@@ -50,6 +57,7 @@ export class MessageSendResponseDto {
       : null;
     response.sequence = message.sequence;
     response.clientMessageId = message.clientMessageId;
+    response.replyTo = MessageReplyReferenceResponseDto.fromDomain(replyTo);
     response.createdAt = message.createdAt;
     return response;
   }

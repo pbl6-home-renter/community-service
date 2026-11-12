@@ -39,6 +39,7 @@ export class MessageMarkReadCommandHandler implements ICommandHandler<
     command: MessageMarkReadCommand,
   ): Promise<MessageMarkReadResult> {
     let changed = false;
+    let isActiveMember = false;
     const result = await this.unitOfWork.run(async (context) => {
       const conversation = await this.conversations.findByIdForUpdate(
         command.conversationId,
@@ -86,6 +87,7 @@ export class MessageMarkReadCommandHandler implements ICommandHandler<
       }
 
       changed = member.markRead(command.lastReadSequence);
+      isActiveMember = member.status === ConversationMemberStatus.ACTIVE;
       if (changed) await this.members.save(member, context);
 
       return {
@@ -100,13 +102,22 @@ export class MessageMarkReadCommandHandler implements ICommandHandler<
         ),
       };
     });
-    if (changed)
+    if (changed) {
       this.realtime.readUpdated(
         command.actorUserId,
         result.conversationId,
         result.unreadCount,
         command.lastReadSequence,
       );
+      // Read receipts count active members only.
+      if (isActiveMember) {
+        this.realtime.memberReadUpdated(
+          result.conversationId,
+          command.actorUserId,
+          command.lastReadSequence,
+        );
+      }
+    }
     return result;
   }
 }

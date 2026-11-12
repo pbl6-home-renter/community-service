@@ -7,5 +7,7 @@ export class MessageListQuery implements CursorPageQuery {
     readonly actorUserId: Uuid,
     readonly cursor: string | undefined,
     readonly pageSize: number,
+    /** Optional inclusive upper bound used to open a specific message. */
+    readonly maxSequence: string | null = null,
   ) {}
 }

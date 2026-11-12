@@ -13,6 +13,10 @@ import { MessagePayload } from '../../domain/types/message-payload.type';
   name: 'FK_messages_sender_member_id',
   onDelete: 'RESTRICT',
 })
+@ForeignKey('messages', ['replyToMessageId'], ['id'], {
+  name: 'FK_messages_reply_to_message_id',
+  onDelete: 'RESTRICT',
+})
 @Index('UQ_messages_conversation_sequence', ['conversationId', 'sequence'], {
   unique: true,
 })
@@ -51,6 +55,9 @@ export class MessageTypeormEntity extends AbstractEntity {
 
   @Column({ type: 'jsonb', nullable: true })
   payload: MessagePayload | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  replyToMessageId: Uuid | null;
 
   @Column({ type: 'bigint' })
   sequence: string;

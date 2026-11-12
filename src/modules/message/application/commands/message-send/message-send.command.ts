@@ -9,5 +9,6 @@ export class MessageSendCommand {
     readonly type: MessageType.TEXT | MessageType.IMAGE,
     readonly content: string | null,
     readonly mediaId: Uuid | null,
+    readonly replyToMessageId: Uuid | null = null,
   ) {}
 }

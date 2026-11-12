@@ -3,6 +3,7 @@ import { Uuid } from 'shared/domain/value-objects/uuid.vo';
 import { MessageType } from '../../../domain/enums/message-type.enum';
 import { MessagePayload } from '../../../domain/types/message-payload.type';
 import { MessageReadModel } from '../../../application/ports/message-page-query.port';
+import { MessageReplyReferenceResponseDto } from './message-reply-reference.response.dto';
 
 export class MessageListResponseDto {
   @ApiProperty({ format: 'uuid' })
@@ -44,6 +45,9 @@ export class MessageListResponseDto {
   @ApiProperty({ nullable: true, type: Object })
   payload: MessagePayload | null;
 
+  @ApiProperty({ type: MessageReplyReferenceResponseDto, nullable: true })
+  replyTo: MessageReplyReferenceResponseDto | null;
+
   @ApiProperty({ format: 'date-time' })
   createdAt: Date;
 
@@ -51,6 +55,7 @@ export class MessageListResponseDto {
     return Object.assign(new MessageListResponseDto(), model, {
       mediaId: model.mediaId,
       mediaUrl: model.mediaId ? `/api/v1/media/${model.mediaId}` : null,
+      replyTo: MessageReplyReferenceResponseDto.fromDomain(model.replyTo),
     });
   }
 }
