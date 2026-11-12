@@ -412,6 +412,14 @@ boilerplate/
 | Swagger | `/api/v1/<PATH>/swagger` (JSON: `/api/v1/<PATH>/swagger/json`), bật bằng `ENABLE_DOCUMENTATION` |
 | [`be`](https://github.com/pbl6-home-renter/be) | Hợp đồng OpenAPI chuẩn — mọi thay đổi API phải cập nhật `src/` ở đó và bundle lại |
 
+## Contract conversation membership
+
+Consumer `community.contract-context` nhận `contract.activated`, `contract_member.linked` và `contract_member.left`; consumer `community.contract-member-added` nhận `contract_member.added` từ Tenancy. Hai subscriber dùng chung `ContractContextEventHandler` để validate event, ghi inbox và gọi `ContractContextApplyCommandHandler` trong cùng transaction.
+
+Event activation tạo contract conversation và membership ban đầu. Member event đến trước activation được lưu chờ; handler áp dụng theo thứ tự event và bỏ qua event cũ đã bị thay thế để tránh kích hoạt lại member đã rời. Event `added` có `tenantUserId = NULL` không tạo membership. Các thay đổi membership chỉ được gửi realtime sau khi transaction commit. Event không chứa phone và Community không gọi Identity để resolve phone.
+
+Việc tách queue theo yêu cầu refactor này thay đổi topology một queue trong P9-D83. Khi triển khai trên broker đã chạy bản cũ, tạo/bind queue `community.contract-member-added` với `contract_member.added`, rồi gỡ binding `contract_member.added` khỏi `community.contract-context` trước khi thay subscriber. Cho consumer cũ xử lý hết message tồn trong queue/retry trước khi dừng. RabbitMQ giữ binding durable cũ khi ứng dụng khởi động lại; chỉ đổi `routingKeys` trong code không tự gỡ binding đó.
+
 ## Triển khai
 
 - **[`deploy.yml`](.github/workflows/deploy.yml)** — chạy khi push lên `main` hoặc `workflow_dispatch`: build image `linux/amd64`, push `<DOCKERHUB_USERNAME>/rentify-backend:latest`, rồi SSH vào EC2 chạy `infra/scripts/deploy.sh` (bỏ qua bước deploy nếu chưa cấu hình `EC2_HOST`). Secrets: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, `EC2_HOST`, `EC2_USER`, `EC2_SSH_KEY`.
