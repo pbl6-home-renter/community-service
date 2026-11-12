@@ -13,6 +13,7 @@ import { MessageEntity } from '../entities/message.entity';
 export class MessageReplyReference {
   private constructor(
     readonly id: Uuid,
+    readonly sequence: string | null,
     readonly senderName: string | null,
     readonly type: ContentMessageType | null,
     readonly contentPreview: string | null,
@@ -25,6 +26,7 @@ export class MessageReplyReference {
     }
     return new MessageReplyReference(
       original.id,
+      original.sequence,
       original.senderNameSnapshot,
       original.type,
       original.contentPreview,
@@ -33,6 +35,6 @@ export class MessageReplyReference {
   }
 
   static unavailable(id: Uuid): MessageReplyReference {
-    return new MessageReplyReference(id, null, null, null, true);
+    return new MessageReplyReference(id, null, null, null, null, true);
   }
 }

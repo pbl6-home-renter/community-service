@@ -8,6 +8,9 @@ export class MessageReplyReferenceResponseDto {
   @ApiProperty({ format: 'uuid' })
   id: Uuid;
 
+  @ApiProperty({ type: String, nullable: true, pattern: '^\\d+$' })
+  sequence: string | null;
+
   @ApiProperty({ type: String, nullable: true, maxLength: 254 })
   senderName: string | null;
 
@@ -29,6 +32,7 @@ export class MessageReplyReferenceResponseDto {
     if (!reference) return null;
     const response = new MessageReplyReferenceResponseDto();
     response.id = reference.id;
+    response.sequence = reference.sequence;
     response.senderName = reference.senderName;
     response.type = reference.type;
     response.contentPreview = reference.contentPreview;
