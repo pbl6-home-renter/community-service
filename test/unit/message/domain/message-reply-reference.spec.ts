@@ -62,6 +62,7 @@ describe('MessageReplyReference', () => {
 
     expect(MessageReplyReference.of(original)).toEqual({
       id: original.id,
+      sequence: original.sequence,
       senderName: 'Tenant One',
       type: MessageType.IMAGE,
       contentPreview: 'Ảnh vòi',
@@ -74,6 +75,7 @@ describe('MessageReplyReference', () => {
 
     expect(MessageReplyReference.of(original)).toEqual({
       id: original.id,
+      sequence: null,
       senderName: null,
       type: null,
       contentPreview: null,

@@ -298,6 +298,7 @@ describe('MessageSendCommandHandler replies', () => {
     });
     expect(replyTo).toEqual({
       id: target.id,
+      sequence: target.sequence,
       senderName: 'Landlord',
       type: MessageType.TEXT,
       contentPreview: 'Thợ qua lúc 9 giờ nhé',
@@ -401,6 +402,7 @@ describe('MessageSendCommandHandler replies', () => {
     expect(result.message).toBe(stored);
     expect(result.replyTo).toEqual({
       id: originalId,
+      sequence: null,
       senderName: null,
       type: null,
       contentPreview: null,
