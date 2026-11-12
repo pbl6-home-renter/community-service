@@ -22,12 +22,16 @@ import { ChatMessagePushNotifier } from '../../services/chat-message-push-notifi
 import { ConversationKind } from 'modules/conversation/domain/enums/conversation-kind.enum';
 import { ConversationEntity } from 'modules/conversation/domain/entities/conversation.entity';
 import { ConversationMemberEntity } from 'modules/conversation-member/domain/entities/conversation-member.entity';
+import { MessageReplyReference } from '../../../domain/value-objects/message-reply-reference.vo';
+import { MessageReplyTargetInvalidException } from '../../../domain/exceptions/message-reply-target-invalid.exception';
+import { MessageSendResult } from './message-send.result';
 
-type MessageSendResult =
+type MessageSendTransactionResult =
   | { message: MessageEntity; created: false }
   | {
       message: MessageEntity;
       created: true;
+      replyTo: MessageReplyReference | null;
       conversation: ConversationEntity;
       activeMembers: ConversationMemberEntity[];
     };
@@ -35,7 +39,7 @@ type MessageSendResult =
 @CommandHandler(MessageSendCommand)
 export class MessageSendCommandHandler implements ICommandHandler<
   MessageSendCommand,
-  MessageEntity
+  MessageSendResult
 > {
   constructor(
     @Inject(CONVERSATION_DI_TOKEN.REPOSITORY)
@@ -53,7 +57,7 @@ export class MessageSendCommandHandler implements ICommandHandler<
     private readonly chatMessagePushNotifier: ChatMessagePushNotifier,
   ) {}
 
-  async execute(command: MessageSendCommand): Promise<MessageEntity> {
+  async execute(command: MessageSendCommand): Promise<MessageSendResult> {
     this.validateContent(command);
     if (command.type === MessageType.IMAGE && command.mediaId) {
       const conversation = await this.conversations.findById(
@@ -74,14 +78,14 @@ export class MessageSendCommandHandler implements ICommandHandler<
         member.id,
         command.clientMessageId,
       );
-      if (existing) return existing;
+      if (existing) return this.withCurrentReplyTo(existing);
       await this.mediaValidator.assertAttachable(
         command.mediaId,
         command.conversationId,
       );
     }
 
-    const result = await this.unitOfWork.run<MessageSendResult>(
+    const result = await this.unitOfWork.run<MessageSendTransactionResult>(
       async (context) => {
         const conversation = await this.conversations.findByIdForUpdate(
           command.conversationId,
@@ -105,7 +109,18 @@ export class MessageSendCommandHandler implements ICommandHandler<
           member.id,
           command.clientMessageId,
         );
+        // A retry returns the stored message without re-validating its quote.
         if (existing) return { message: existing, created: false };
+
+        let replyTo: MessageReplyReference | null = null;
+        if (command.replyToMessageId) {
+          const original = await this.messages.findById(
+            command.replyToMessageId,
+          );
+          if (!original) throw new MessageReplyTargetInvalidException();
+          original.assertReplyableIn(command.conversationId);
+          replyTo = MessageReplyReference.of(original);
+        }
 
         const sequence = await this.messages.nextSequenceForUpdate(
           command.conversationId,
@@ -119,6 +134,7 @@ export class MessageSendCommandHandler implements ICommandHandler<
           type: command.type,
           content: command.content,
           mediaId: command.mediaId,
+          replyToMessageId: replyTo?.id ?? null,
           sequence,
         });
         await this.messages.save(message, context);
@@ -126,41 +142,64 @@ export class MessageSendCommandHandler implements ICommandHandler<
           command.conversationId,
           context,
         );
-        return { message, created: true, conversation, activeMembers };
+        return {
+          message,
+          created: true,
+          replyTo,
+          conversation,
+          activeMembers,
+        };
       },
     );
-    if (result.created) {
-      const createdMessage = result.message;
-      this.realtime.messageCreated(createdMessage, command.senderUserId);
-      for (const member of result.activeMembers) {
-        const recipientUserId = member.userId;
-        if (!recipientUserId) continue;
-        const otherMember = result.activeMembers.find(
-          (candidate) =>
-            candidate.userId !== null &&
-            candidate.userId.toLowerCase() !== recipientUserId.toLowerCase(),
-        );
-        this.realtime.messageReceived(recipientUserId, {
-          messageId: createdMessage.id,
-          conversationId: createdMessage.conversationId,
-          sequence: createdMessage.sequence,
-          senderUserId: command.senderUserId,
-          senderName: createdMessage.senderNameSnapshot,
-          conversationName:
-            result.conversation.kind === ConversationKind.DIRECT
-              ? (otherMember?.displayName ?? null)
-              : (result.conversation.title?.value ?? null),
-          type: command.type,
-          contentPreview: this.createContentPreview(createdMessage),
-          createdAt: createdMessage.createdAt,
-        });
-      }
-      void this.chatMessagePushNotifier.notify(
-        createdMessage,
-        command.senderUserId,
+    if (!result.created) return this.withCurrentReplyTo(result.message);
+    const createdMessage = result.message;
+    this.realtime.messageCreated(
+      createdMessage,
+      command.senderUserId,
+      result.replyTo,
+    );
+    for (const member of result.activeMembers) {
+      const recipientUserId = member.userId;
+      if (!recipientUserId) continue;
+      const otherMember = result.activeMembers.find(
+        (candidate) =>
+          candidate.userId !== null &&
+          candidate.userId.toLowerCase() !== recipientUserId.toLowerCase(),
       );
+      this.realtime.messageReceived(recipientUserId, {
+        messageId: createdMessage.id,
+        conversationId: createdMessage.conversationId,
+        sequence: createdMessage.sequence,
+        senderUserId: command.senderUserId,
+        senderName: createdMessage.senderNameSnapshot,
+        conversationName:
+          result.conversation.kind === ConversationKind.DIRECT
+            ? (otherMember?.displayName ?? null)
+            : (result.conversation.title?.value ?? null),
+        type: command.type,
+        contentPreview: this.createContentPreview(createdMessage),
+        createdAt: createdMessage.createdAt,
+      });
     }
-    return result.message;
+    void this.chatMessagePushNotifier.notify(
+      createdMessage,
+      command.senderUserId,
+    );
+    return { message: result.message, replyTo: result.replyTo };
+  }
+
+  /** Resolves the quote of a stored message from the original's current state. */
+  private async withCurrentReplyTo(
+    message: MessageEntity,
+  ): Promise<MessageSendResult> {
+    if (!message.replyToMessageId) return { message, replyTo: null };
+    const original = await this.messages.findById(message.replyToMessageId);
+    return {
+      message,
+      replyTo: original
+        ? MessageReplyReference.of(original)
+        : MessageReplyReference.unavailable(message.replyToMessageId),
+    };
   }
 
   private validateContent(command: MessageSendCommand): void {

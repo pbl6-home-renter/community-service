@@ -5,6 +5,10 @@ import { MessageProps } from './message.props';
 import { MessageType } from '../enums/message-type.enum';
 import { MessagePayload } from '../types/message-payload.type';
 import { MediaReference } from 'modules/media/domain/value-objects/media-reference.vo';
+import { isContentMessageType } from '../constants/content-message-types.constant';
+import { MessageReplyTargetInvalidException } from '../exceptions/message-reply-target-invalid.exception';
+
+const CONTENT_PREVIEW_MAX_LENGTH = 120;
 
 export class MessageEntity extends AggregateRoot {
   private readonly _media: MediaReference | null;
@@ -19,6 +23,7 @@ export class MessageEntity extends AggregateRoot {
     readonly content: string | null,
     mediaId: Uuid | null,
     readonly payload: MessagePayload | null,
+    readonly replyToMessageId: Uuid | null,
     readonly sequence: string,
     createdAt: Date,
     updatedAt: Date,
@@ -30,6 +35,25 @@ export class MessageEntity extends AggregateRoot {
 
   get mediaId(): Uuid | null {
     return this._media?.mediaId ?? null;
+  }
+
+  /** Text/bot content or image caption, at most 120 characters. */
+  get contentPreview(): string {
+    const content = this.content ?? '';
+    return content.length <= CONTENT_PREVIEW_MAX_LENGTH
+      ? content
+      : `${content.slice(0, CONTENT_PREVIEW_MAX_LENGTH - 3)}...`;
+  }
+
+  /** A reply may only quote a live text/image/bot message of the same conversation. */
+  assertReplyableIn(conversationId: Uuid): void {
+    if (
+      this.isDeleted ||
+      this.conversationId.toLowerCase() !== conversationId.toLowerCase() ||
+      !isContentMessageType(this.type)
+    ) {
+      throw new MessageReplyTargetInvalidException();
+    }
   }
 
   static create(props: MessageProps): MessageEntity {
@@ -51,6 +75,7 @@ export class MessageEntity extends AggregateRoot {
       props.content ?? null,
       props.mediaId ?? null,
       props.payload ?? null,
+      props.replyToMessageId ?? null,
       props.sequence,
       props.createdAt ?? new Date(),
       props.updatedAt ?? new Date(),

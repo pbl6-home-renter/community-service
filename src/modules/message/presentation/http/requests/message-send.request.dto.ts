@@ -37,6 +37,15 @@ export class MessageSendRequestDto {
   @IsUuid()
   mediaId?: Uuid | null;
 
+  @ApiPropertyOptional({
+    nullable: true,
+    format: 'uuid',
+    description: 'ID tin được trả lời (cùng hội thoại, text/image/bot).',
+  })
+  @IsOptional()
+  @IsUuid()
+  replyToMessageId?: Uuid | null;
+
   static toCommand(
     request: MessageSendRequestDto,
     senderUserId: Uuid,
@@ -48,6 +57,7 @@ export class MessageSendRequestDto {
       request.type,
       request.content?.trim() || null,
       request.mediaId ?? null,
+      request.replyToMessageId ?? null,
     );
   }
 }

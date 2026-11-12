@@ -32,6 +32,7 @@ import { ConversationMediaOwnershipLookupQueryHandler } from './application/quer
 import { TypeOrmConversationMediaOwnershipQuery } from './infrastructure/queries/typeorm-conversation-media-ownership.query';
 import { MessageSendCommandHandler } from 'modules/message/application/commands/message-send/message-send.command.handler';
 import { MessageListQueryHandler } from 'modules/message/application/queries/message-list/message-list.query.handler';
+import { MessageSearchQueryHandler } from 'modules/message/application/queries/message-search/message-search.query.handler';
 import { TypeOrmMessagePageQuery } from 'modules/message/infrastructure/queries/typeorm-message-page.query';
 import { MessageController } from 'modules/message/presentation/http/controllers/message.controller';
 import { MESSAGE_DI_TOKEN } from 'modules/message/message.di-token';
@@ -61,6 +62,7 @@ const queryHandlers = [
   ConversationUnreadSummaryQueryHandler,
   ConversationMediaOwnershipLookupQueryHandler,
   MessageListQueryHandler,
+  MessageSearchQueryHandler,
 ];
 
 @Module({

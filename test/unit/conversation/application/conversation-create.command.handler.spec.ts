@@ -65,6 +65,7 @@ describe('ConversationCreateCommandHandler', () => {
       messageCreated: jest.fn(),
       messageReceived: jest.fn(),
       readUpdated: jest.fn(),
+      memberReadUpdated: jest.fn(),
       membershipRevoked: jest.fn(),
     };
     const handler = new ConversationCreateCommandHandler(
@@ -127,6 +128,7 @@ describe('ConversationCreateCommandHandler', () => {
         messageCreated: jest.fn(),
         messageReceived: jest.fn(),
         readUpdated: jest.fn(),
+        memberReadUpdated: jest.fn(),
         membershipRevoked: jest.fn(),
       },
     );
