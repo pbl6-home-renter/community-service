@@ -23,6 +23,18 @@ export class MessageListRequestDto extends CursorPaginationRequestDto {
   @Matches(/^[1-9]\d{0,17}$/)
   maxSequence?: string;
 
+  @ApiPropertyOptional({
+    type: String,
+    pattern: '^(0|[1-9]\\d{0,17})$',
+    example: '42',
+    description:
+      'Chỉ trả tin có sequence > afterSequence, sắp tăng dần (tải tin mới hơn khi đang xem tin cũ).',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^(0|[1-9]\d{0,17})$/)
+  afterSequence?: string;
+
   static toQuery(
     request: MessageListRequestDto,
     actorUserId: Uuid,
@@ -33,6 +45,7 @@ export class MessageListRequestDto extends CursorPaginationRequestDto {
       request.cursor,
       request.pageSize,
       request.maxSequence ?? null,
+      request.afterSequence ?? null,
     );
   }
 }
