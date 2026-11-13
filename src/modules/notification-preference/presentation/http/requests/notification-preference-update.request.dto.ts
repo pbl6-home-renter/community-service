@@ -23,8 +23,8 @@ export class NotificationPreferenceItemRequestDto {
 export class NotificationPreferenceUpdateRequestDto {
   @ApiProperty({ type: [NotificationPreferenceItemRequestDto] })
   @IsArray()
-  @ArrayMinSize(3)
-  @ArrayMaxSize(3)
+  @ArrayMinSize(4)
+  @ArrayMaxSize(4)
   @ValidateNested({ each: true })
   @Type(() => NotificationPreferenceItemRequestDto)
   preferences: NotificationPreferenceItemRequestDto[];
