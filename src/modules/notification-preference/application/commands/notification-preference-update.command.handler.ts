@@ -31,7 +31,7 @@ export class NotificationPreferenceUpdateCommandHandler implements ICommandHandl
       )
     ) {
       throw new ValidationException(
-        'Exactly one preference for chat, invoice and issue is required',
+        'Exactly one preference for chat, invoice, issue and system is required',
       );
     }
     const values = Object.fromEntries(

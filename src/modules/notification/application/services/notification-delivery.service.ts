@@ -63,9 +63,14 @@ export class NotificationDeliveryService implements NotificationDeliveryPort {
   }
 
   private categoryOf(type: NotificationType): NotificationCategory {
-    return type === NotificationType.INVOICE
-      ? NotificationCategory.INVOICE
-      : NotificationCategory.ISSUE;
+    switch (type) {
+      case NotificationType.INVOICE:
+        return NotificationCategory.INVOICE;
+      case NotificationType.ISSUE:
+        return NotificationCategory.ISSUE;
+      case NotificationType.SYSTEM:
+        return NotificationCategory.SYSTEM;
+    }
   }
 
   private toStringData(
