@@ -10,7 +10,7 @@ export interface ChatMessageReceivedEvent {
   senderUserId: Uuid | null;
   senderName: string;
   conversationName: string | null;
-  type: MessageType.TEXT | MessageType.IMAGE | MessageType.BOT;
+  type: MessageType.TEXT | MessageType.IMAGE | MessageType.VIDEO | MessageType.FILE | MessageType.BOT;
   contentPreview: string;
   createdAt: Date;
 }

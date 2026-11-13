@@ -59,7 +59,7 @@ export class MessageSendCommandHandler implements ICommandHandler<
 
   async execute(command: MessageSendCommand): Promise<MessageSendResult> {
     this.validateContent(command);
-    if (command.type === MessageType.IMAGE && command.mediaId) {
+    if (command.type !== MessageType.TEXT && command.mediaId) {
       const conversation = await this.conversations.findById(
         command.conversationId,
       );
@@ -82,6 +82,7 @@ export class MessageSendCommandHandler implements ICommandHandler<
       await this.mediaValidator.assertAttachable(
         command.mediaId,
         command.conversationId,
+        command.type,
       );
     }
 
@@ -213,7 +214,7 @@ export class MessageSendCommandHandler implements ICommandHandler<
       }
       return;
     }
-    if (command.type === MessageType.IMAGE && command.mediaId === null) {
+    if (command.mediaId === null) {
       throw new MessageContentInvalidException();
     }
     if (content !== null && content.length > 4000) {

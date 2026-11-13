@@ -15,7 +15,7 @@ export class MessageReplyReferenceResponseDto {
   senderName: string | null;
 
   @ApiProperty({
-    enum: [MessageType.TEXT, MessageType.IMAGE, MessageType.BOT],
+    enum: [MessageType.TEXT, MessageType.IMAGE, MessageType.VIDEO, MessageType.FILE, MessageType.BOT],
     nullable: true,
   })
   type: ContentMessageType | null;

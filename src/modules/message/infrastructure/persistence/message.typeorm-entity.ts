@@ -27,8 +27,8 @@ import { MessagePayload } from '../../domain/types/message-payload.type';
 @Index('IDX_messages_conversation_created_at', ['conversationId', 'sequence'])
 @Check('CHK_messages_sequence_positive', 'sequence > 0')
 @Check(
-  'CHK_messages_type',
-  "message_type IN ('text', 'image', 'system', 'bot')",
+  'CHK_messages_type_v2',
+  "message_type IN ('text', 'image', 'video', 'file', 'system', 'bot')",
 )
 @Check('CHK_messages_single_media', 'cardinality(media_ids) <= 1')
 export class MessageTypeormEntity extends AbstractEntity {
