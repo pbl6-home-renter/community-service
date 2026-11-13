@@ -49,8 +49,14 @@ export class TypeOrmMessagePageQuery implements MessagePageQueryPort {
       });
     }
 
+    if (query.afterSequence !== null) {
+      builder.andWhere('message.sequence > :afterSequence', {
+        afterSequence: query.afterSequence,
+      });
+    }
+
     const page = await TypeOrmCursorPaginator.of(builder, query)
-      .withSort('sequence', 'desc')
+      .withSort('sequence', query.afterSequence !== null ? 'asc' : 'desc')
       .paginate();
     const senderMemberIds = [
       ...new Set(page.data.map((message) => message.senderMemberId)),

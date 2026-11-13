@@ -54,6 +54,7 @@ export class MessageListQueryHandler implements IQueryHandler<
       cursor: query.cursor,
       pageSize: query.pageSize,
       maxSequence: lowerSequence(query.maxSequence, visibleUpTo),
+      afterSequence: query.afterSequence,
     });
   }
 }

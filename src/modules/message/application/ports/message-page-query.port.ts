@@ -11,6 +11,8 @@ export interface MessagePageQuery extends CursorPageQuery {
   actorUserId: Uuid;
   /** Inclusive upper bound; already capped by the read-only boundary. */
   maxSequence: string | null;
+  /** Exclusive lower bound; when set the page is ordered oldest-first. */
+  afterSequence: string | null;
 }
 
 export interface MessageSearchPageQuery extends CursorPageQuery {

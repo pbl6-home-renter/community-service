@@ -104,6 +104,7 @@ describe('MessageListQueryHandler maxSequence', () => {
         cursor: 'cursor',
         pageSize: 30,
         maxSequence: expected,
+        afterSequence: null,
       });
     },
   );
@@ -118,6 +119,19 @@ describe('MessageListQueryHandler maxSequence', () => {
 
     expect(pageQuery.findPage).toHaveBeenCalledWith(
       expect.objectContaining({ maxSequence: '99' }),
+    );
+  });
+
+  it('keeps the read-only boundary while loading newer messages after an anchor', async () => {
+    const { conversation, member, userId } = conversationWithMember('50');
+    const { list, pageQuery } = setup(conversation, member);
+
+    await list.execute(
+      new MessageListQuery(conversation.id, userId, undefined, 30, null, '40'),
+    );
+
+    expect(pageQuery.findPage).toHaveBeenCalledWith(
+      expect.objectContaining({ afterSequence: '40', maxSequence: '50' }),
     );
   });
 });
