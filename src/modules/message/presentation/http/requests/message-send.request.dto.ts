@@ -22,9 +22,9 @@ export class MessageSendRequestDto {
   @IsNotEmpty()
   clientMessageId: Uuid;
 
-  @ApiProperty({ enum: [MessageType.TEXT, MessageType.IMAGE] })
-  @IsIn([MessageType.TEXT, MessageType.IMAGE])
-  type: MessageType.TEXT | MessageType.IMAGE;
+  @ApiProperty({ enum: [MessageType.TEXT, MessageType.IMAGE, MessageType.VIDEO, MessageType.FILE] })
+  @IsIn([MessageType.TEXT, MessageType.IMAGE, MessageType.VIDEO, MessageType.FILE])
+  type: MessageType.TEXT | MessageType.IMAGE | MessageType.VIDEO | MessageType.FILE;
 
   @ApiPropertyOptional({ nullable: true, maxLength: 4000 })
   @IsOptional()

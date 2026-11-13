@@ -14,7 +14,7 @@ export class MessageSearchResponseDto {
   @ApiProperty({ maxLength: 254 })
   senderName: string;
 
-  @ApiProperty({ enum: [MessageType.TEXT, MessageType.IMAGE, MessageType.BOT] })
+  @ApiProperty({ enum: [MessageType.TEXT, MessageType.IMAGE, MessageType.VIDEO, MessageType.FILE, MessageType.BOT] })
   type: ContentMessageType;
 
   @ApiProperty({ maxLength: 120 })

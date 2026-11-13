@@ -1,7 +1,7 @@
 import { MessageType } from '../enums/message-type.enum';
 
 export type ContentMessageType =
-  MessageType.TEXT | MessageType.IMAGE | MessageType.BOT;
+  MessageType.TEXT | MessageType.IMAGE | MessageType.VIDEO | MessageType.FILE | MessageType.BOT;
 
 /**
  * Message types that carry user-visible content: they can be replied to and
@@ -10,6 +10,8 @@ export type ContentMessageType =
 export const CONTENT_MESSAGE_TYPES: readonly ContentMessageType[] = [
   MessageType.TEXT,
   MessageType.IMAGE,
+  MessageType.VIDEO,
+  MessageType.FILE,
   MessageType.BOT,
 ];
 

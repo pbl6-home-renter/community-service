@@ -9,6 +9,7 @@ import { MessageMediaValidatorPort } from '../../application/ports/message-media
 
 interface MediaChatAttachmentValidationResult {
   valid: boolean;
+  fileType: string | null;
 }
 
 @Injectable()
@@ -18,7 +19,7 @@ export class IdentityMessageMediaValidatorService implements MessageMediaValidat
     private readonly internalHttpClient: IInternalHttpClient,
   ) {}
 
-  async assertAttachable(mediaId: Uuid, conversationId: Uuid): Promise<void> {
+  async assertAttachable(mediaId: Uuid, conversationId: Uuid, type: 'image' | 'video' | 'file'): Promise<void> {
     let result: MediaChatAttachmentValidationResult;
     try {
       result =
@@ -33,6 +34,6 @@ export class IdentityMessageMediaValidatorService implements MessageMediaValidat
         'Chat media validation failed',
       );
     }
-    if (!result.valid) throw new MessageContentInvalidException();
+    if (!result.valid || result.fileType !== (type === 'file' ? 'document' : type)) throw new MessageContentInvalidException();
   }
 }
