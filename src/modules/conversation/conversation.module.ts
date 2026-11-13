@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { InboxModule } from 'modules/inbox/inbox.module';
 import { ContractContextSubscriber } from './presentation/messaging/contract-context.subscriber';
+import { BuildingContextSubscriber } from './presentation/messaging/building-context.subscriber';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CqrsModule } from '@nestjs/cqrs';
 import { ConversationMemberModule } from 'modules/conversation-member/conversation-member.module';
@@ -78,6 +79,7 @@ const queryHandlers = [
   ],
   providers: [
     ContractContextSubscriber,
+    BuildingContextSubscriber,
     ...commandHandlers,
     ...queryHandlers,
     ConversationSocketAccessService,
