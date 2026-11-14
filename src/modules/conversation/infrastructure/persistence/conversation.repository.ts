@@ -23,6 +23,15 @@ export class TypeOrmConversationRepository implements ConversationRepository {
     contextId: Uuid,
     context: TransactionContext,
   ): Promise<ConversationEntity | null> {
+    if (!(context instanceof TypeOrmTransactionContext)) {
+      throw new Error(
+        'Conversation context lock requires a TypeORM transaction',
+      );
+    }
+    await context.manager.query(
+      'SELECT pg_advisory_xact_lock(hashtextextended($1, 0))',
+      [`conversation-context:${contextType}:${contextId}`],
+    );
     const raw = await withTransaction(this.repository, context).findOne({
       where: { contextType, contextId, isDeleted: false },
       lock: { mode: 'pessimistic_write' },

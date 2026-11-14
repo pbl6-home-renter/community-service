@@ -3,6 +3,7 @@ import { InboxModule } from 'modules/inbox/inbox.module';
 import { ContractMemberAddedSubscriber } from './presentation/messaging/contract-member-added.subscriber';
 import { ContractContextEventHandler } from './presentation/messaging/contract-context-event.handler';
 import { ContractContextSubscriber } from './presentation/messaging/contract-context.subscriber';
+import { BuildingContextSubscriber } from './presentation/messaging/building-context.subscriber';
 import { ContractContextApplyCommandHandler } from './application/commands/contract-context-apply/contract-context-apply.command.handler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CqrsModule } from '@nestjs/cqrs';
@@ -89,6 +90,7 @@ const queryHandlers = [
   ],
   providers: [
     ContractContextSubscriber,
+    BuildingContextSubscriber,
     ContractMemberAddedSubscriber,
     ContractContextEventHandler,
     TypeOrmContractContextEventStore,
