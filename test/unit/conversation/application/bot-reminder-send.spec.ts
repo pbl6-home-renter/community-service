@@ -9,6 +9,8 @@ import { ConversationMemberRole } from 'modules/conversation-member/domain/enums
 import { ConversationParticipantType } from 'modules/conversation-member/domain/enums/conversation-participant-type.enum';
 import { MessageEntity } from 'modules/message/domain/entities/message.entity';
 import { MessageType } from 'modules/message/domain/enums/message-type.enum';
+import { BOT_REMINDER_MESSAGE_CODE } from 'modules/message/domain/constants/bot-reminder-message-code.constant';
+import { ChatMessagePushNotifier } from 'modules/message/application/services/chat-message-push-notifier';
 import { generateUuid } from 'shared/domain/value-objects/uuid.vo';
 import { TransactionContext } from 'shared/domain/repositories/transaction-context';
 
@@ -69,7 +71,16 @@ describe('manual bot reminders', () => {
         saved = message;
       }),
     };
-    const resources = { render: jest.fn(async () => 'Invoice notice') };
+    const resources = {
+      render: jest.fn(async () => ({
+        messageCode: BOT_REMINDER_MESSAGE_CODE.INVOICE_ISSUED,
+        parameters: {
+          invoiceCode: 'INV-1',
+          period: '2026-10',
+          totalAmount: '1000000.00',
+        },
+      })),
+    };
     const uow = {
       run: jest.fn(async (fn: (ctx: TransactionContext) => Promise<unknown>) =>
         fn(context),
@@ -102,11 +113,47 @@ describe('manual bot reminders', () => {
     const first = await f.handler.execute(command);
     const second = await f.handler.execute(command);
     expect(first.message.type).toBe(MessageType.BOT);
+    expect(first.message.content).toBe('New reminder');
+    expect(first.message.payload).toMatchObject({
+      messageCode: BOT_REMINDER_MESSAGE_CODE.INVOICE_ISSUED,
+      parameters: { invoiceCode: 'INV-1', totalAmount: '1000000.00' },
+    });
     expect(second.message.id).toBe(first.message.id);
     expect(f.messages.save).toHaveBeenCalledTimes(1);
     expect(f.resources.render).toHaveBeenCalledTimes(1);
     expect(f.realtime.messageCreated).toHaveBeenCalledTimes(1);
     expect(f.push.notify).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends a readable push fallback with a code and unformatted snapshot', async () => {
+    const f = setup();
+    const { message } = await f.handler.execute(command);
+    const recipient = ConversationMemberEntity.create({
+      conversationId: conversation.id,
+      participantType: ConversationParticipantType.USER,
+      userId: generateUuid(),
+      displayName: 'Tenant',
+      role: ConversationMemberRole.MEMBER,
+    });
+    const members = {
+      findActiveUserMembers: jest.fn(async () => [user, recipient]),
+    };
+    const delivery = { send: jest.fn() };
+    await new ChatMessagePushNotifier(members as never, delivery).notify(
+      message,
+      userId,
+    );
+    const pushed = delivery.send.mock.calls[0][1][0];
+    expect(pushed.userId).toBe(recipient.userId);
+    expect(pushed.message.body).toBe('New reminder');
+    expect(pushed.message.data.messageCode).toBe(
+      BOT_REMINDER_MESSAGE_CODE.INVOICE_ISSUED,
+    );
+    expect(JSON.parse(pushed.message.data.messageParameters)).toEqual({
+      invoiceCode: 'INV-1',
+      period: '2026-10',
+      totalAmount: '1000000.00',
+    });
   });
 
   it('rejects a different resource with the same key', async () => {
@@ -170,7 +217,14 @@ describe('manual bot reminders', () => {
       contractId,
       'token',
     );
-    expect(message).toContain('1.000.000 đồng');
+    expect(message).toEqual({
+      messageCode: BOT_REMINDER_MESSAGE_CODE.INVOICE_ISSUED,
+      parameters: {
+        invoiceCode: 'INV-1',
+        period: '2026-10',
+        totalAmount: '1000000.00',
+      },
+    });
     expect(get).toHaveBeenCalledWith(
       'tenancy',
       `/api/v1/invoices/${invoiceId}`,
@@ -193,13 +247,11 @@ describe('manual bot reminders', () => {
   });
 
   it('only renders the active matching contract and propagates authorization failure', async () => {
-    const get = jest
-      .fn()
-      .mockResolvedValue({
-        id: contractId,
-        status: 'active',
-        endDate: '2026-12-30',
-      });
+    const get = jest.fn().mockResolvedValue({
+      id: contractId,
+      status: 'active',
+      endDate: '2026-12-30',
+    });
     const resource = new TenancyBotReminderResourceService({ get });
     expect(
       await resource.render(
@@ -208,7 +260,10 @@ describe('manual bot reminders', () => {
         contractId,
         'token',
       ),
-    ).toContain('30/12/2026');
+    ).toEqual({
+      messageCode: BOT_REMINDER_MESSAGE_CODE.CONTRACT_END_DATE,
+      parameters: { endDate: '2026-12-30' },
+    });
     await expect(
       resource.render('contract_expiring', generateUuid(), contractId, 'token'),
     ).rejects.toThrow();

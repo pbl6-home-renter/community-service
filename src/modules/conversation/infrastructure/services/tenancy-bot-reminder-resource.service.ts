@@ -5,6 +5,10 @@ import { IInternalHttpClient } from 'shared/application/ports/internal-http-clie
 import { ValidationException } from 'shared/domain/exceptions/validation.exception';
 import { Uuid } from 'shared/domain/value-objects/uuid.vo';
 import {
+  BOT_REMINDER_MESSAGE_CODE,
+  BotReminderContent,
+} from 'modules/message/domain/constants/bot-reminder-message-code.constant';
+import {
   BotReminderResourcePort,
   ReminderTemplate,
 } from '../../application/ports/bot-reminder-resource.port';
@@ -35,7 +39,7 @@ export class TenancyBotReminderResourceService implements BotReminderResourcePor
     resourceId: Uuid,
     contractId: Uuid,
     token: string,
-  ): Promise<string> {
+  ): Promise<BotReminderContent> {
     if (template === 'contract_expiring') {
       if (resourceId.toLowerCase() !== contractId.toLowerCase())
         throw new ValidationException('Resource does not match conversation');
@@ -51,8 +55,10 @@ export class TenancyBotReminderResourceService implements BotReminderResourcePor
       ) {
         throw new ValidationException('Contract is not eligible for reminder');
       }
-      const [year, month, day] = contract.endDate.split('-');
-      return `Thông báo: Ngày kết thúc hợp đồng thuê là ${day}/${month}/${year}. Vui lòng liên hệ chủ nhà để trao đổi.`;
+      return {
+        messageCode: BOT_REMINDER_MESSAGE_CODE.CONTRACT_END_DATE,
+        parameters: { endDate: contract.endDate },
+      };
     }
     const invoice = await this.client.get<InvoiceSnapshot>(
       PeerService.TENANCY,
@@ -71,11 +77,13 @@ export class TenancyBotReminderResourceService implements BotReminderResourcePor
     ) {
       throw new ValidationException('Invoice is not eligible for reminder');
     }
-    const [year, month] = invoice.period.split('-');
-    const [whole, fraction] = invoice.totalAmount.split('.');
-    const amount =
-      whole.replace(/\B(?=(\d{3})+(?!\d))/g, '.') +
-      (fraction && /[1-9]/.test(fraction) ? `,${fraction}` : '');
-    return `Thông báo: Hóa đơn ${invoice.code} kỳ ${month}/${year} có tổng tiền ${amount} đồng. Vui lòng xem chi tiết hóa đơn.`;
+    return {
+      messageCode: BOT_REMINDER_MESSAGE_CODE.INVOICE_ISSUED,
+      parameters: {
+        invoiceCode: invoice.code,
+        period: invoice.period,
+        totalAmount: invoice.totalAmount,
+      },
+    };
   }
 }

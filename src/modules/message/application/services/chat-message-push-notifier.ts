@@ -7,6 +7,7 @@ import { MessageEntity } from '../../domain/entities/message.entity';
 import { MessageType } from '../../domain/enums/message-type.enum';
 import { Uuid } from 'shared/domain/value-objects/uuid.vo';
 import { CONVERSATION_MEMBER_DI_TOKEN } from 'modules/conversation-member/conversation-member.di-token';
+import { BOT_REMINDER_FALLBACK_TEXT } from '../../domain/constants/bot-reminder-message-code.constant';
 
 const PREVIEW_MAX_LENGTH = 140;
 const ATTACHMENT_PREVIEWS: Partial<Record<MessageType, string>> = {
@@ -32,7 +33,13 @@ export class ChatMessagePushNotifier {
         message.conversationId,
       );
       // Array.from splits by code point so an emoji is never cut in half.
+      const reminder =
+        message.type === MessageType.BOT &&
+        message.payload?.action === 'bot_reminder'
+          ? message.payload
+          : null;
       const preview =
+        (reminder ? BOT_REMINDER_FALLBACK_TEXT : undefined) ??
         ATTACHMENT_PREVIEWS[message.type] ??
         Array.from(message.content ?? '')
           .slice(0, PREVIEW_MAX_LENGTH)
@@ -46,6 +53,12 @@ export class ChatMessagePushNotifier {
           senderName: message.senderNameSnapshot,
           preview,
           deepLink: `/conversations/${message.conversationId}`,
+          ...(reminder
+            ? {
+                messageCode: reminder.messageCode,
+                messageParameters: JSON.stringify(reminder.parameters),
+              }
+            : {}),
         },
       };
       await this.pushDelivery.send(
