@@ -1,4 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
+import {
+  avatarUrlOf,
+  UserAvatarUrls,
+} from 'modules/conversation/application/queries/user-avatar-lookup/user-avatar-lookup.query.handler';
 import { Uuid } from 'shared/domain/value-objects/uuid.vo';
 import { MessageType } from '../../../domain/enums/message-type.enum';
 import { MessagePayload } from '../../../domain/types/message-payload.type';
@@ -17,6 +21,14 @@ export class MessageListResponseDto {
 
   @ApiProperty({ maxLength: 254 })
   senderName: string;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description:
+      'URL avatar hiện tại của người gửi; null nếu chưa có hoặc là system.',
+  })
+  senderAvatarUrl: string | null;
 
   @ApiProperty({ enum: ['user', 'system'] })
   senderType: 'user' | 'system';
@@ -51,8 +63,12 @@ export class MessageListResponseDto {
   @ApiProperty({ format: 'date-time' })
   createdAt: Date;
 
-  static fromReadModel(model: MessageReadModel): MessageListResponseDto {
+  static fromReadModel(
+    model: MessageReadModel,
+    avatars?: UserAvatarUrls,
+  ): MessageListResponseDto {
     return Object.assign(new MessageListResponseDto(), model, {
+      senderAvatarUrl: avatarUrlOf(avatars, model.senderUserId),
       mediaId: model.mediaId,
       mediaUrl: model.mediaId ? `/api/v1/media/${model.mediaId}` : null,
       replyTo: MessageReplyReferenceResponseDto.fromDomain(model.replyTo),

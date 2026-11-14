@@ -196,6 +196,7 @@ export class ChatGateway implements OnModuleInit, ChatRealtimePort {
       sequence: event.sequence,
       senderUserId: event.senderUserId,
       senderName: event.senderName,
+      senderAvatarUrl: event.senderAvatarUrl,
       conversationName: event.conversationName,
       type: event.type,
       contentPreview: event.contentPreview,

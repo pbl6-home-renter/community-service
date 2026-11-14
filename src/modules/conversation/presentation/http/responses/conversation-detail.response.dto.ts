@@ -1,4 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
+import {
+  avatarUrlOf,
+  UserAvatarUrls,
+} from 'modules/conversation/application/queries/user-avatar-lookup/user-avatar-lookup.query.handler';
 import { Uuid } from 'shared/domain/value-objects/uuid.vo';
 import { ConversationDetailQueryResult } from 'modules/conversation/application/ports/conversation-detail-query.port';
 import { ConversationContextType } from 'modules/conversation/domain/enums/conversation-context-type.enum';
@@ -33,7 +37,11 @@ export class ConversationDetailResponseDto {
   @ApiProperty({ format: 'uuid', nullable: true })
   avatarMediaId: Uuid | null;
 
-  @ApiProperty({ nullable: true, description: 'Identity media URL for display.' })
+  @ApiProperty({
+    nullable: true,
+    description:
+      'Group: URL media avatar nhóm. Direct: URL avatar của người còn lại.',
+  })
   avatarUrl: string | null;
 
   @ApiProperty({ minimum: 0 })
@@ -48,7 +56,16 @@ export class ConversationDetailResponseDto {
       'conversation' | 'members' | 'unreadCount'
     >,
     viewerUserId: Uuid,
+    avatars?: UserAvatarUrls,
   ): ConversationDetailResponseDto {
+    const otherMember =
+      result.conversation.kind === ConversationKind.DIRECT
+        ? result.members.find(
+            (member) =>
+              member.participantType === ConversationParticipantType.USER &&
+              member.userId?.toLowerCase() !== viewerUserId.toLowerCase(),
+          )
+        : undefined;
     const response = new ConversationDetailResponseDto();
     response.id = result.conversation.id;
     response.kind = result.conversation.kind;
@@ -57,19 +74,15 @@ export class ConversationDetailResponseDto {
     response.title = result.conversation.title?.value ?? null;
     response.displayName =
       result.conversation.kind === ConversationKind.DIRECT
-        ? (result.members.find(
-            (member) =>
-              member.participantType === ConversationParticipantType.USER &&
-              member.userId?.toLowerCase() !== viewerUserId.toLowerCase(),
-          )?.displayName ?? null)
+        ? (otherMember?.displayName ?? null)
         : response.title;
     response.avatarMediaId = result.conversation.avatarMediaId;
     response.avatarUrl = result.conversation.avatarMediaId
       ? `/api/v1/media/${result.conversation.avatarMediaId}`
-      : null;
+      : avatarUrlOf(avatars, otherMember?.userId ?? null);
     response.unreadCount = result.unreadCount;
-    response.members = result.members.map(
-      ConversationMemberResponseDto.fromDomain,
+    response.members = result.members.map((member) =>
+      ConversationMemberResponseDto.fromDomain(member, avatars),
     );
     return response;
   }
