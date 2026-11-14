@@ -15,6 +15,7 @@ describe('NotificationPreferenceUpdateCommandHandler', () => {
       { type: NotificationCategory.CHAT, pushEnabled: false },
       { type: NotificationCategory.INVOICE, pushEnabled: true },
       { type: NotificationCategory.ISSUE, pushEnabled: false },
+      { type: NotificationCategory.SYSTEM, pushEnabled: true },
     ];
     const preferences = {
       replaceAll: jest.fn(async (_userId, _values, _at, passedContext) => {
@@ -40,6 +41,7 @@ describe('NotificationPreferenceUpdateCommandHandler', () => {
         [NotificationCategory.CHAT]: false,
         [NotificationCategory.INVOICE]: true,
         [NotificationCategory.ISSUE]: false,
+        [NotificationCategory.SYSTEM]: true,
       },
       updatedAt,
       context,
@@ -56,6 +58,15 @@ describe('NotificationPreferenceUpdateCommandHandler', () => {
       unitOfWork,
     );
 
+    await expect(
+      handler.execute(
+        new NotificationPreferenceUpdateCommand(generateUuid(), [
+          { type: NotificationCategory.CHAT, pushEnabled: true },
+          { type: NotificationCategory.INVOICE, pushEnabled: true },
+          { type: NotificationCategory.ISSUE, pushEnabled: true },
+        ]),
+      ),
+    ).rejects.toThrow(ValidationException);
     await expect(
       handler.execute(
         new NotificationPreferenceUpdateCommand(generateUuid(), [
