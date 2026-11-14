@@ -15,6 +15,8 @@ import { RealtimeModule } from 'modules/realtime/realtime.module';
 import { PushDeviceModule } from 'modules/push-device/push-device.module';
 import { NotificationDeliveryService } from './application/services/notification-delivery.service';
 import { NotificationSocketPublisher } from './infrastructure/realtime/notification-socket.publisher';
+import { IssueNotificationRecipientsService } from './application/services/issue-notification-recipients.service';
+import { IssueContextClientModule } from 'modules/issue-report/issue-context-client.module';
 
 const commandHandlers = [
   NotificationMarkReadCommandHandler,
@@ -28,6 +30,7 @@ const queryHandlers = [NotificationListQueryHandler];
     InboxModule,
     RealtimeModule,
     PushDeviceModule,
+    IssueContextClientModule,
     TypeOrmModule.forFeature([NotificationTypeormEntity]),
   ],
   controllers: [NotificationController],
@@ -37,6 +40,7 @@ const queryHandlers = [NotificationListQueryHandler];
     NotificationRequestedSubscriber,
     NotificationDeliveryService,
     NotificationSocketPublisher,
+    IssueNotificationRecipientsService,
     {
       provide: NOTIFICATION_DI_TOKEN.DELIVERY,
       useExisting: NotificationDeliveryService,

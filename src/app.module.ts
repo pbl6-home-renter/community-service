@@ -11,6 +11,7 @@ import { NotificationModule } from 'modules/notification/notification.module';
 import { NotificationPreferenceModule } from 'modules/notification-preference/notification-preference.module';
 import { PushDeviceModule } from 'modules/push-device/push-device.module';
 import { EmailModule } from 'modules/email/email.module';
+import { IssueReportModule } from 'modules/issue-report/issue-report.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { EmailModule } from 'modules/email/email.module';
     NotificationPreferenceModule,
     PushDeviceModule,
     EmailModule,
+    IssueReportModule,
     OutboxModule,
     HealthModule,
   ],

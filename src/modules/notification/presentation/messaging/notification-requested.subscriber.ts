@@ -19,6 +19,8 @@ import {
 } from './notification-requested.integration-event';
 import { ConsumerRegistry } from 'shared/infrastructure/messaging/rabbitmq/consumer/consumer-registry';
 import { NotificationDeliveryPort } from '../../application/ports/notification-delivery.port';
+import { IssueNotificationRecipientsService } from '../../application/services/issue-notification-recipients.service';
+import { Uuid } from 'shared/domain/value-objects/uuid.vo';
 
 @Injectable()
 export class NotificationRequestedSubscriber {
@@ -31,6 +33,7 @@ export class NotificationRequestedSubscriber {
     private readonly unitOfWork: IUnitOfWork,
     @Inject(NOTIFICATION_DI_TOKEN.DELIVERY)
     private readonly delivery: NotificationDeliveryPort,
+    private readonly issueRecipients: IssueNotificationRecipientsService,
   ) {}
 
   @RabbitSubscribe({
@@ -42,7 +45,8 @@ export class NotificationRequestedSubscriber {
   })
   async handle(event: IntegrationEvent): Promise<void> {
     NotificationRequestedEventValidator.assert(event);
-    const notifications = await this.handleOnce(event);
+    const recipients = await this.issueRecipients.resolve(event.payload);
+    const notifications = await this.handleOnce(event, recipients);
     // Best-effort and off the ack path: the inbox row is the source of truth,
     // so a lost push only means the user sees it next time they open the list.
     void this.delivery.deliver(notifications);
@@ -50,6 +54,7 @@ export class NotificationRequestedSubscriber {
 
   private handleOnce(
     event: NotificationRequestedIntegrationEvent,
+    recipients: Uuid[],
   ): Promise<NotificationEntity[]> {
     return this.unitOfWork.run(async (context) => {
       const isNew = await this.inbox.recordIfNew(
@@ -59,7 +64,7 @@ export class NotificationRequestedSubscriber {
       );
       if (!isNew) return [];
 
-      const recipientUserIds = new Set(event.payload.recipientUserIds);
+      const recipientUserIds = new Set(recipients);
       const notifications: NotificationEntity[] = [];
       for (const recipientUserId of recipientUserIds) {
         const notification = NotificationEntity.create({

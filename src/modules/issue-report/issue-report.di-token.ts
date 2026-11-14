@@ -1,0 +1,4 @@
+export const ISSUE_REPORT_DI_TOKEN = {
+  REPOSITORY: Symbol('ISSUE_REPORT_REPOSITORY'),
+  PAGE_QUERY: Symbol('ISSUE_REPORT_PAGE_QUERY'),
+} as const;
