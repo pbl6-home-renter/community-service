@@ -47,6 +47,9 @@ import { ConversationSocketAccessService } from './application/queries/conversat
 import { ChatGateway } from './infrastructure/realtime/chat.gateway';
 import { PushDeviceModule } from 'modules/push-device/push-device.module';
 import { ChatMessagePushNotifier } from 'modules/message/application/services/chat-message-push-notifier';
+import { BotReminderController } from './presentation/http/controllers/bot-reminder.controller';
+import { BotReminderSendCommandHandler } from './application/commands/bot-reminder-send/bot-reminder-send.command.handler';
+import { TenancyBotReminderResourceService } from './infrastructure/services/tenancy-bot-reminder-resource.service';
 
 const commandHandlers = [
   ContractContextApplyCommandHandler,
@@ -55,6 +58,7 @@ const commandHandlers = [
   ConversationMemberDepartureCommandHandler,
   ConversationMemberRoleUpdateCommandHandler,
   MessageSendCommandHandler,
+  BotReminderSendCommandHandler,
   MessageMarkReadCommandHandler,
   ConversationMetadataUpdateCommandHandler,
 ];
@@ -85,6 +89,7 @@ const queryHandlers = [
   ],
   controllers: [
     ConversationController,
+    BotReminderController,
     ConversationMediaOwnershipInternalController,
     MessageController,
   ],
@@ -98,6 +103,7 @@ const queryHandlers = [
     ...queryHandlers,
     ConversationSocketAccessService,
     ChatMessagePushNotifier,
+    TenancyBotReminderResourceService,
     ChatGateway,
     TypeOrmConversationDetailQuery,
     TypeOrmConversationPageQuery,
@@ -108,6 +114,10 @@ const queryHandlers = [
     {
       provide: CONVERSATION_DI_TOKEN.CHAT_REALTIME,
       useExisting: ChatGateway,
+    },
+    {
+      provide: CONVERSATION_DI_TOKEN.BOT_REMINDER_RESOURCE,
+      useExisting: TenancyBotReminderResourceService,
     },
     {
       provide: CONVERSATION_DI_TOKEN.CONTEXT_EVENT_STORE,

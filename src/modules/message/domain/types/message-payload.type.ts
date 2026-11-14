@@ -65,6 +65,12 @@ export interface ConversationAvatarChangedMessagePayloadData {
 }
 
 export type MessagePayload =
+  | {
+      action: 'bot_reminder';
+      actorUserId: Uuid;
+      templateType: 'invoice' | 'contract_expiring';
+      resourceId: Uuid;
+    }
   | MembersAddedMessagePayloadData
   | MemberKickedMessagePayloadData
   | MemberLeftMessagePayloadData
