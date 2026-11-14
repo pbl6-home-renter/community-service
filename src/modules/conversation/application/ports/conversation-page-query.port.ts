@@ -38,6 +38,8 @@ export interface ConversationListReadModel {
   title: string | null;
   /** Viewer-specific: other member's snapshot name (direct) or title (group). */
   displayName: string | null;
+  /** Direct only: the other member's user id, for their avatar. */
+  otherUserId: Uuid | null;
   avatarMediaId: Uuid | null;
   unreadCount: number;
   lastMessage: ConversationLastMessageReadModel | null;

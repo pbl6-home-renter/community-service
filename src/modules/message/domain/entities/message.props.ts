@@ -12,6 +12,7 @@ export interface MessageProps {
   content?: string | null;
   mediaId?: Uuid | null;
   payload?: MessagePayload | null;
+  replyToMessageId?: Uuid | null;
   sequence: string;
   createdAt?: Date;
   updatedAt?: Date;

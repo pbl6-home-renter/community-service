@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsNotEmpty, IsOptional, IsString, Matches } from 'class-validator';
 import { CursorPaginationRequestDto } from 'shared/presentation/pagination/cursor-pagination.request.dto';
 import { Uuid } from 'shared/domain/value-objects/uuid.vo';
 import { IsUuid } from 'shared/presentation/validators/is-uuid.decorator';
@@ -11,6 +11,30 @@ export class MessageListRequestDto extends CursorPaginationRequestDto {
   @IsNotEmpty()
   conversationId: Uuid;
 
+  @ApiPropertyOptional({
+    type: String,
+    pattern: '^[1-9]\\d{0,17}$',
+    example: '42',
+    description:
+      'Chỉ trả tin có sequence <= maxSequence (mở tin tìm được); trang sau dùng cursor.',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^[1-9]\d{0,17}$/)
+  maxSequence?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    pattern: '^(0|[1-9]\\d{0,17})$',
+    example: '42',
+    description:
+      'Chỉ trả tin có sequence > afterSequence, sắp tăng dần (tải tin mới hơn khi đang xem tin cũ).',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^(0|[1-9]\d{0,17})$/)
+  afterSequence?: string;
+
   static toQuery(
     request: MessageListRequestDto,
     actorUserId: Uuid,
@@ -20,6 +44,8 @@ export class MessageListRequestDto extends CursorPaginationRequestDto {
       actorUserId,
       request.cursor,
       request.pageSize,
+      request.maxSequence ?? null,
+      request.afterSequence ?? null,
     );
   }
 }

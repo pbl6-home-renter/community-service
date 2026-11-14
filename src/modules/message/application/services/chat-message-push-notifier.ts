@@ -9,7 +9,11 @@ import { Uuid } from 'shared/domain/value-objects/uuid.vo';
 import { CONVERSATION_MEMBER_DI_TOKEN } from 'modules/conversation-member/conversation-member.di-token';
 
 const PREVIEW_MAX_LENGTH = 140;
-const IMAGE_MESSAGE_PREVIEW = 'Đã gửi ảnh';
+const ATTACHMENT_PREVIEWS: Partial<Record<MessageType, string>> = {
+  [MessageType.IMAGE]: '📷',
+  [MessageType.VIDEO]: '🎬',
+  [MessageType.FILE]: '📎',
+};
 
 @Injectable()
 export class ChatMessagePushNotifier {
@@ -29,11 +33,10 @@ export class ChatMessagePushNotifier {
       );
       // Array.from splits by code point so an emoji is never cut in half.
       const preview =
-        message.type === MessageType.IMAGE
-          ? IMAGE_MESSAGE_PREVIEW
-          : Array.from(message.content ?? '')
-              .slice(0, PREVIEW_MAX_LENGTH)
-              .join('');
+        ATTACHMENT_PREVIEWS[message.type] ??
+        Array.from(message.content ?? '')
+          .slice(0, PREVIEW_MAX_LENGTH)
+          .join('');
       const pushMessage = {
         title: message.senderNameSnapshot,
         body: preview,
