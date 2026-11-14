@@ -1,4 +1,5 @@
 import { Uuid } from 'shared/domain/value-objects/uuid.vo';
+import { BotReminderContent } from '../constants/bot-reminder-message-code.constant';
 
 /** Payload của system message khi admin thêm thành viên vào hội thoại. */
 export interface MembersAddedMessagePayloadData {
@@ -65,12 +66,12 @@ export interface ConversationAvatarChangedMessagePayloadData {
 }
 
 export type MessagePayload =
-  | {
+  | (BotReminderContent & {
       action: 'bot_reminder';
       actorUserId: Uuid;
       templateType: 'invoice' | 'contract_expiring';
       resourceId: Uuid;
-    }
+    })
   | MembersAddedMessagePayloadData
   | MemberKickedMessagePayloadData
   | MemberLeftMessagePayloadData

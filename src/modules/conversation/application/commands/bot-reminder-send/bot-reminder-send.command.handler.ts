@@ -10,6 +10,7 @@ import { MessageSendResult } from 'modules/message/application/commands/message-
 import { ChatMessagePushNotifier } from 'modules/message/application/services/chat-message-push-notifier';
 import { MessageEntity } from 'modules/message/domain/entities/message.entity';
 import { MessageType } from 'modules/message/domain/enums/message-type.enum';
+import { BOT_REMINDER_FALLBACK_TEXT } from 'modules/message/domain/constants/bot-reminder-message-code.constant';
 import { MessageRepository } from 'modules/message/domain/repositories/message.repository';
 import { MESSAGE_DI_TOKEN } from 'modules/message/message.di-token';
 import { UNIT_OF_WORK_DI_TOKEN } from 'shared/application/di-tokens';
@@ -133,13 +134,14 @@ export class BotReminderSendCommandHandler implements ICommandHandler<
         senderNameSnapshot: sender.displayName,
         clientMessageId: command.clientMessageId,
         type: MessageType.BOT,
-        content,
+        content: BOT_REMINDER_FALLBACK_TEXT,
         sequence,
         payload: {
           action: 'bot_reminder',
           actorUserId: command.userId,
           templateType: command.templateType,
           resourceId: command.resourceId,
+          ...content,
         },
       });
       await this.messages.save(message, context);

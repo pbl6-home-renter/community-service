@@ -7,7 +7,6 @@ import {
 } from '../../application/ports/chat-realtime.port';
 import { isValidUuid, Uuid } from 'shared/domain/value-objects/uuid.vo';
 import { MessageEntity } from 'modules/message/domain/entities/message.entity';
-import { MessageType } from 'modules/message/domain/enums/message-type.enum';
 import { MessageReplyReference } from 'modules/message/domain/value-objects/message-reply-reference.vo';
 import {
   SocketServer,
@@ -175,8 +174,7 @@ export class ChatGateway implements OnModuleInit, ChatRealtimePort {
         type: message.type,
         content: message.content,
         mediaId: message.mediaId,
-        // Older chat clients understand bot text but not the reminder payload yet.
-        payload: message.type === MessageType.BOT ? null : message.payload,
+        payload: message.payload,
         replyTo: replyTo
           ? {
               id: replyTo.id,
