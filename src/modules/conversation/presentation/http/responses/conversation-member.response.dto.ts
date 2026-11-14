@@ -1,4 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
+import {
+  avatarUrlOf,
+  UserAvatarUrls,
+} from 'modules/conversation/application/queries/user-avatar-lookup/user-avatar-lookup.query.handler';
 import { Uuid } from 'shared/domain/value-objects/uuid.vo';
 import { ConversationMemberEntity } from 'modules/conversation-member/domain/entities/conversation-member.entity';
 import { ConversationMemberRole } from 'modules/conversation-member/domain/enums/conversation-member-role.enum';
@@ -17,6 +21,14 @@ export class ConversationMemberResponseDto {
 
   @ApiProperty({ maxLength: 254 })
   displayName: string;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description:
+      'URL avatar của user (Identity); null nếu chưa có hoặc là system.',
+  })
+  avatarUrl: string | null;
 
   @ApiProperty({ enum: ConversationParticipantType })
   participantType: ConversationParticipantType;
@@ -50,12 +62,14 @@ export class ConversationMemberResponseDto {
 
   static fromDomain(
     member: ConversationMemberEntity,
+    avatars?: UserAvatarUrls,
   ): ConversationMemberResponseDto {
     const response = new ConversationMemberResponseDto();
     response.id = member.id;
     response.conversationId = member.conversationId;
     response.userId = member.userId;
     response.displayName = member.displayName;
+    response.avatarUrl = avatarUrlOf(avatars, member.userId);
     response.participantType = member.participantType;
     response.role = member.role;
     response.status = member.status;

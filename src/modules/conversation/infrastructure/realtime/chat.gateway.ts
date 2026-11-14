@@ -7,6 +7,7 @@ import {
 } from '../../application/ports/chat-realtime.port';
 import { isValidUuid, Uuid } from 'shared/domain/value-objects/uuid.vo';
 import { MessageEntity } from 'modules/message/domain/entities/message.entity';
+import { MessageReplyReference } from 'modules/message/domain/value-objects/message-reply-reference.vo';
 import {
   SocketServer,
   userRoom,
@@ -27,6 +28,9 @@ interface JoinResult {
   ok: boolean;
   code: ConversationSocketAckCode;
   conversationId?: Uuid;
+}
+interface TypingRequest extends JoinRequest {
+  isTyping?: unknown;
 }
 
 @Injectable()
@@ -62,6 +66,21 @@ export class ChatGateway implements OnModuleInit, ChatRealtimePort {
           .catch((error: unknown) => {
             this.logger.error(`Socket leave failed: ${String(error)}`);
             acknowledge?.({ ok: false, code: ACK.INTERNAL_ERROR });
+          });
+      },
+    );
+    client.on(
+      CLIENT_EVENTS.TYPING,
+      (request: TypingRequest, acknowledge?: (result: JoinResult) => void) => {
+        void this.typing(client, request)
+          .then((result) =>
+            typeof acknowledge === 'function' ? acknowledge(result) : undefined,
+          )
+          .catch((error: unknown) => {
+            this.logger.error(`Socket typing failed: ${String(error)}`);
+            if (typeof acknowledge === 'function') {
+              acknowledge({ ok: false, code: ACK.INTERNAL_ERROR });
+            }
           });
       },
     );
@@ -104,7 +123,43 @@ export class ChatGateway implements OnModuleInit, ChatRealtimePort {
     return { ok: true, code: ACK.LEFT, conversationId };
   }
 
-  messageCreated(message: MessageEntity, senderUserId: Uuid | null): void {
+  /**
+   * Relays a typing signal to the other sockets of the room. Nothing is
+   * stored; the sender must have joined the room and still be active.
+   */
+  async typing(client: Socket, request: TypingRequest): Promise<JoinResult> {
+    const userId: Uuid | undefined = client.data.userId;
+    if (!userId) return { ok: false, code: ACK.UNAUTHORIZED };
+    if (
+      !request ||
+      typeof request.conversationId !== 'string' ||
+      !isValidUuid(request.conversationId)
+    ) {
+      return { ok: false, code: ACK.INVALID_CONVERSATION_ID };
+    }
+    if (typeof request.isTyping !== 'boolean') {
+      return { ok: false, code: ACK.INVALID_PAYLOAD };
+    }
+    const conversationId = request.conversationId as Uuid;
+    const room = conversationRoom(conversationId);
+    if (!client.rooms.has(room)) return { ok: false, code: ACK.FORBIDDEN };
+    if (!(await this.access.canJoin(conversationId, userId))) {
+      await client.leave(room);
+      return { ok: false, code: ACK.FORBIDDEN };
+    }
+    client.to(room).emit(SERVER_EVENTS.TYPING, {
+      conversationId,
+      userId,
+      isTyping: request.isTyping,
+    });
+    return { ok: true, code: ACK.SENT, conversationId };
+  }
+
+  messageCreated(
+    message: MessageEntity,
+    senderUserId: Uuid | null,
+    replyTo: MessageReplyReference | null = null,
+  ): void {
     this.socket.emit(
       conversationRoom(message.conversationId),
       SERVER_EVENTS.MESSAGE_CREATED,
@@ -120,6 +175,15 @@ export class ChatGateway implements OnModuleInit, ChatRealtimePort {
         content: message.content,
         mediaId: message.mediaId,
         payload: message.payload,
+        replyTo: replyTo
+          ? {
+              id: replyTo.id,
+              senderName: replyTo.senderName,
+              type: replyTo.type,
+              contentPreview: replyTo.contentPreview,
+              isUnavailable: replyTo.isUnavailable,
+            }
+          : null,
         createdAt: message.createdAt,
       },
     );
@@ -132,6 +196,7 @@ export class ChatGateway implements OnModuleInit, ChatRealtimePort {
       sequence: event.sequence,
       senderUserId: event.senderUserId,
       senderName: event.senderName,
+      senderAvatarUrl: event.senderAvatarUrl,
       conversationName: event.conversationName,
       type: event.type,
       contentPreview: event.contentPreview,
@@ -150,6 +215,22 @@ export class ChatGateway implements OnModuleInit, ChatRealtimePort {
       unreadCount,
       lastReadSequence,
     });
+  }
+
+  memberReadUpdated(
+    conversationId: Uuid,
+    userId: Uuid,
+    lastReadSequence: string,
+  ): void {
+    this.socket.emit(
+      conversationRoom(conversationId),
+      SERVER_EVENTS.MEMBER_READ,
+      {
+        conversationId,
+        userId,
+        lastReadSequence,
+      },
+    );
   }
 
   membershipRevoked(userId: Uuid, conversationId: Uuid): void {

@@ -1,4 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  avatarUrlOf,
+  UserAvatarUrls,
+} from 'modules/conversation/application/queries/user-avatar-lookup/user-avatar-lookup.query.handler';
 import { Uuid } from 'shared/domain/value-objects/uuid.vo';
 import { ConversationContextType } from 'modules/conversation/domain/enums/conversation-context-type.enum';
 import { ConversationKind } from 'modules/conversation/domain/enums/conversation-kind.enum';
@@ -32,7 +36,11 @@ export class ConversationListResponseDto {
   @ApiPropertyOptional({ format: 'uuid', nullable: true })
   avatarMediaId: Uuid | null;
 
-  @ApiPropertyOptional({ nullable: true, description: 'Identity media URL for display.' })
+  @ApiPropertyOptional({
+    nullable: true,
+    description:
+      'Group: URL media avatar nhóm. Direct: URL avatar của người còn lại.',
+  })
   avatarUrl: string | null;
 
   @ApiProperty({ minimum: 0 })
@@ -46,6 +54,7 @@ export class ConversationListResponseDto {
 
   static fromReadModel(
     conversation: ConversationListReadModel,
+    avatars?: UserAvatarUrls,
   ): ConversationListResponseDto {
     const response = new ConversationListResponseDto();
     response.id = conversation.id;
@@ -57,7 +66,7 @@ export class ConversationListResponseDto {
     response.avatarMediaId = conversation.avatarMediaId;
     response.avatarUrl = conversation.avatarMediaId
       ? `/api/v1/media/${conversation.avatarMediaId}`
-      : null;
+      : avatarUrlOf(avatars, conversation.otherUserId);
     response.unreadCount = conversation.unreadCount;
     response.lastMessage = conversation.lastMessage
       ? ConversationLastMessageResponseDto.fromReadModel(

@@ -11,7 +11,7 @@ import { AuthenticatedRequest } from '../http/authenticated-request';
 import { AccessTokenVerifier } from 'shared/infrastructure/security/access-token-verifier.service';
 
 /**
- * Global guard: every route requires a valid access token unless marked
+ * Global HTTP guard: every route requires a valid access token unless marked
  * `@Public()` or `@InternalOnly()`. Identity headers set by the gateway
  * (`x-user-*`) are deliberately ignored.
  */

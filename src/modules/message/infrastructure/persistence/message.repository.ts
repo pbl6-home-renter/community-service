@@ -107,6 +107,22 @@ export class TypeOrmMessageRepository implements MessageRepository {
     return String(result[0].sequence);
   }
 
+  async latestSequenceAtOrBefore(
+    conversationId: Uuid,
+    occurredAt: Date,
+    context: TransactionContext,
+  ): Promise<string> {
+    if (!(context instanceof TypeOrmTransactionContext)) {
+      throw new Error('Message sequence lookup requires a TypeORM transaction');
+    }
+    const rows = (await context.manager.query(
+      `SELECT COALESCE(MAX(sequence), 0) AS sequence FROM messages
+       WHERE conversation_id = $1 AND created_at <= $2 AND is_deleted = false`,
+      [conversationId, occurredAt],
+    )) as Array<{ sequence: string }>;
+    return String(rows[0].sequence);
+  }
+
   async hasSequenceForConversation(
     conversationId: Uuid,
     sequence: string,

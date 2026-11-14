@@ -1,6 +1,6 @@
 # Email transport
 
-Community consumes the generic `email.send_requested` integration event from the shared RabbitMQ topic exchange and sends it through the configured SMTP transport. Identity is the first producer for password-reset email; other services can publish the same contract without Community depending on their domain models.
+Community consumes the generic `email.send_requested` integration event from the shared RabbitMQ topic exchange and sends it through the configured SMTP transport. Identity publishes email-verification and password-reset emails; other services can publish the same contract without Community depending on their domain models.
 The SMTP sender is also exported as an application port so the business-notification pipeline can add email as a delivery channel without creating a second transport.
 
 ```json

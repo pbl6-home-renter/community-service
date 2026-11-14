@@ -26,6 +26,7 @@ import {
 interface ConversationActivityRow {
   conversationId: Uuid;
   otherMemberDisplayName: string | null;
+  otherMemberUserId: Uuid | null;
   unreadCount: string;
   lastMessageId: Uuid | null;
   lastMessageSequence: string | null;
@@ -42,7 +43,7 @@ export class TypeOrmConversationPageQuery implements ConversationPageQueryPort {
     @InjectRepository(ConversationTypeormEntity)
     private readonly conversations: Repository<ConversationTypeormEntity>,
     private readonly dataSource: DataSource,
-  ) { }
+  ) {}
 
   async findPage(
     query: ConversationPageQuery,
@@ -168,6 +169,7 @@ export class TypeOrmConversationPageQuery implements ConversationPageQueryPort {
       `SELECT
          current_member.conversation_id AS "conversationId",
          other_member.display_name AS "otherMemberDisplayName",
+         other_member.user_id AS "otherMemberUserId",
          COALESCE(unread_messages.unread_count, 0)::text AS "unreadCount",
          latest_message.id AS "lastMessageId",
          latest_message.sequence AS "lastMessageSequence",
@@ -178,7 +180,7 @@ export class TypeOrmConversationPageQuery implements ConversationPageQueryPort {
          latest_message.created_at AS "lastMessageSentAt"
        FROM conversation_members AS current_member
        LEFT JOIN LATERAL (
-         SELECT peer_member.display_name
+         SELECT peer_member.display_name, peer_member.user_id
          FROM conversation_members AS peer_member
          WHERE peer_member.conversation_id = current_member.conversation_id
            AND peer_member.participant_type = 'user'
@@ -238,21 +240,25 @@ export class TypeOrmConversationPageQuery implements ConversationPageQueryPort {
             conversation.kind === ConversationKind.DIRECT
               ? (activity?.otherMemberDisplayName ?? null)
               : (conversation.title?.value ?? null),
+          otherUserId:
+            conversation.kind === ConversationKind.DIRECT
+              ? (activity?.otherMemberUserId ?? null)
+              : null,
           avatarMediaId: conversation.avatarMediaId,
           unreadCount: Number(activity?.unreadCount ?? 0),
           lastMessage: activity?.lastMessageId
             ? {
-              id: activity.lastMessageId,
-              sequence: activity.lastMessageSequence!,
-              senderNameSnapshot: activity.senderNameSnapshot!,
-              content:
-                activity.lastMessageType === MessageType.IMAGE
-                  ? 'Đã gửi ảnh'
-                  : activity.lastMessageContent,
-              type: activity.lastMessageType!,
-              payload: activity.lastMessagePayload,
-              sentAt: activity.lastMessageSentAt!,
-            }
+                id: activity.lastMessageId,
+                sequence: activity.lastMessageSequence!,
+                senderNameSnapshot: activity.senderNameSnapshot!,
+                content:
+                  activity.lastMessageType === MessageType.IMAGE
+                    ? 'Đã gửi ảnh'
+                    : activity.lastMessageContent,
+                type: activity.lastMessageType!,
+                payload: activity.lastMessagePayload,
+                sentAt: activity.lastMessageSentAt!,
+              }
             : null,
         };
       }),

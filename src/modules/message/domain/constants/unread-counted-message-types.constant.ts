@@ -7,5 +7,7 @@ import { MessageType } from '../enums/message-type.enum';
 export const UNREAD_COUNTED_MESSAGE_TYPES: readonly MessageType[] = [
   MessageType.TEXT,
   MessageType.IMAGE,
+  MessageType.VIDEO,
+  MessageType.FILE,
   MessageType.BOT,
 ];

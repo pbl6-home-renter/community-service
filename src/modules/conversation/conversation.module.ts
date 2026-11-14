@@ -1,7 +1,10 @@
 import { Module } from '@nestjs/common';
 import { InboxModule } from 'modules/inbox/inbox.module';
+import { ContractMemberAddedSubscriber } from './presentation/messaging/contract-member-added.subscriber';
+import { ContractContextEventHandler } from './presentation/messaging/contract-context-event.handler';
 import { ContractContextSubscriber } from './presentation/messaging/contract-context.subscriber';
 import { BuildingContextSubscriber } from './presentation/messaging/building-context.subscriber';
+import { ContractContextApplyCommandHandler } from './application/commands/contract-context-apply/contract-context-apply.command.handler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CqrsModule } from '@nestjs/cqrs';
 import { ConversationMemberModule } from 'modules/conversation-member/conversation-member.module';
@@ -12,6 +15,7 @@ import { ConversationMemberDepartureCommandHandler } from './application/command
 import { ConversationMemberRoleUpdateCommandHandler } from './application/commands/conversation-member-role-update/conversation-member-role-update.command.handler';
 import { ConversationListQueryHandler } from './application/queries/conversation-list/conversation-list.query.handler';
 import { ConversationGetDetailQueryHandler } from './application/queries/conversation-get-detail/conversation-get-detail.query.handler';
+import { UserAvatarLookupQueryHandler } from './application/queries/user-avatar-lookup/user-avatar-lookup.query.handler';
 import { ConversationUnreadSummaryQueryHandler } from './application/queries/conversation-unread-summary/conversation-unread-summary.query.handler';
 import { TypeOrmConversationUnreadSummaryQuery } from './infrastructure/queries/typeorm-conversation-unread-summary.query';
 import { IdentityConversationUserLookupService } from './infrastructure/services/identity-conversation-user-lookup.service';
@@ -19,6 +23,8 @@ import { TypeOrmConversationDetailQuery } from './infrastructure/queries/typeorm
 import { TypeOrmConversationPageQuery } from './infrastructure/queries/typeorm-conversation-page.query';
 import { CONVERSATION_DI_TOKEN } from './conversation.di-token';
 import { ConversationTypeormEntity } from './infrastructure/persistence/conversation.typeorm-entity';
+import { ContractContextEventTypeormEntity } from './infrastructure/persistence/contract-context-event.typeorm-entity';
+import { TypeOrmContractContextEventStore } from './infrastructure/persistence/contract-context-event.store';
 import { TypeOrmConversationRepository } from './infrastructure/persistence/conversation.repository';
 import { ConversationMemberTypeormEntity } from 'modules/conversation-member/infrastructure/persistence/conversation-member.typeorm-entity';
 import { ConversationController } from './presentation/http/controllers/conversation.controller';
@@ -28,6 +34,7 @@ import { ConversationMediaOwnershipLookupQueryHandler } from './application/quer
 import { TypeOrmConversationMediaOwnershipQuery } from './infrastructure/queries/typeorm-conversation-media-ownership.query';
 import { MessageSendCommandHandler } from 'modules/message/application/commands/message-send/message-send.command.handler';
 import { MessageListQueryHandler } from 'modules/message/application/queries/message-list/message-list.query.handler';
+import { MessageSearchQueryHandler } from 'modules/message/application/queries/message-search/message-search.query.handler';
 import { TypeOrmMessagePageQuery } from 'modules/message/infrastructure/queries/typeorm-message-page.query';
 import { MessageController } from 'modules/message/presentation/http/controllers/message.controller';
 import { MESSAGE_DI_TOKEN } from 'modules/message/message.di-token';
@@ -42,6 +49,7 @@ import { PushDeviceModule } from 'modules/push-device/push-device.module';
 import { ChatMessagePushNotifier } from 'modules/message/application/services/chat-message-push-notifier';
 
 const commandHandlers = [
+  ContractContextApplyCommandHandler,
   ConversationCreateCommandHandler,
   ConversationMembersAddCommandHandler,
   ConversationMemberDepartureCommandHandler,
@@ -53,9 +61,11 @@ const commandHandlers = [
 const queryHandlers = [
   ConversationListQueryHandler,
   ConversationGetDetailQueryHandler,
+  UserAvatarLookupQueryHandler,
   ConversationUnreadSummaryQueryHandler,
   ConversationMediaOwnershipLookupQueryHandler,
   MessageListQueryHandler,
+  MessageSearchQueryHandler,
 ];
 
 @Module({
@@ -68,6 +78,7 @@ const queryHandlers = [
     PushDeviceModule,
     TypeOrmModule.forFeature([
       ConversationTypeormEntity,
+      ContractContextEventTypeormEntity,
       ConversationMemberTypeormEntity,
       MessageTypeormEntity,
     ]),
@@ -80,6 +91,9 @@ const queryHandlers = [
   providers: [
     ContractContextSubscriber,
     BuildingContextSubscriber,
+    ContractMemberAddedSubscriber,
+    ContractContextEventHandler,
+    TypeOrmContractContextEventStore,
     ...commandHandlers,
     ...queryHandlers,
     ConversationSocketAccessService,
@@ -94,6 +108,10 @@ const queryHandlers = [
     {
       provide: CONVERSATION_DI_TOKEN.CHAT_REALTIME,
       useExisting: ChatGateway,
+    },
+    {
+      provide: CONVERSATION_DI_TOKEN.CONTEXT_EVENT_STORE,
+      useExisting: TypeOrmContractContextEventStore,
     },
     {
       provide: CONVERSATION_DI_TOKEN.USER_LOOKUP,
