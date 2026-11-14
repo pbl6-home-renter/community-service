@@ -21,6 +21,7 @@ import { AuthenticatedUser } from 'shared/application/auth/authenticated-user';
 import { UserRole } from 'shared/domain/enums/user-role.enum';
 import { ValidationException } from 'shared/domain/exceptions/validation.exception';
 import { Uuid } from 'shared/domain/value-objects/uuid.vo';
+import { ApiSuccessResponse } from 'shared/presentation/decorators/api-success-response.decorator';
 import { Roles } from 'shared/presentation/decorators/auth/access-control.decorators';
 import { CurrentUser } from 'shared/presentation/decorators/auth/current-user.decorator';
 import { ResponseCode } from 'shared/presentation/decorators/response-code.decorator';
@@ -41,7 +42,24 @@ export class BotReminderController {
     operationId: 'sendBotReminder',
     summary: 'Send a manual reminder to a contract conversation',
   })
-  @ApiResponse({ status: HttpStatus.CREATED, type: MessageSendResponseDto })
+  @ApiSuccessResponse({
+    status: HttpStatus.CREATED,
+    code: 'BOT_REMINDER_SENT',
+    dataDto: MessageSendResponseDto,
+  })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'FORBIDDEN' })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'NOT_FOUND or resource not found',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
+    description: 'VALIDATION_FAILED',
+  })
+  @ApiResponse({
+    status: HttpStatus.SERVICE_UNAVAILABLE,
+    description: 'SERVICE_UNAVAILABLE',
+  })
   async send(
     @Param('conversationId', ParseUUIDPipe) conversationId: Uuid,
     @Body() body: BotReminderSendRequestDto,
