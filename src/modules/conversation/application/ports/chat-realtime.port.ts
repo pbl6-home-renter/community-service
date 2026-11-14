@@ -9,8 +9,14 @@ export interface ChatMessageReceivedEvent {
   sequence: string;
   senderUserId: Uuid | null;
   senderName: string;
+  senderAvatarUrl: string | null;
   conversationName: string | null;
-  type: MessageType.TEXT | MessageType.IMAGE | MessageType.VIDEO | MessageType.FILE | MessageType.BOT;
+  type:
+    | MessageType.TEXT
+    | MessageType.IMAGE
+    | MessageType.VIDEO
+    | MessageType.FILE
+    | MessageType.BOT;
   contentPreview: string;
   createdAt: Date;
 }

@@ -1,3 +1,5 @@
+import { UserAvatarLookupQuery } from '../../../application/queries/user-avatar-lookup/user-avatar-lookup.query';
+import { UserAvatarUrls } from '../../../application/queries/user-avatar-lookup/user-avatar-lookup.query.handler';
 import {
   Body,
   Controller,
@@ -137,8 +139,13 @@ export class ConversationController {
       ConversationListQuery,
       PaginatedResult<ConversationListReadModel>
     >(ConversationListRequestDto.toQuery(request, user.id));
+    const avatars = await this.lookupAvatars(
+      result.data.map((conversation) => conversation.otherUserId),
+    );
     return PaginatedResponseDto.create({
-      data: result.data.map(ConversationListResponseDto.fromReadModel),
+      data: result.data.map((conversation) =>
+        ConversationListResponseDto.fromReadModel(conversation, avatars),
+      ),
       pagination: result.pagination,
     });
   }
@@ -200,7 +207,11 @@ export class ConversationController {
       ConversationGetDetailQuery,
       ConversationDetailQueryResult
     >(new ConversationGetDetailQuery(conversationId, user.id));
-    return ConversationDetailResponseDto.fromResult(result, user.id);
+    return ConversationDetailResponseDto.fromResult(
+      result,
+      user.id,
+      await this.lookupMemberAvatars(result.members),
+    );
   }
 
   @Delete(':conversationId/members/me')
@@ -357,7 +368,10 @@ export class ConversationController {
       ConversationGetDetailQuery,
       ConversationDetailQueryResult
     >(new ConversationGetDetailQuery(conversationId, user.id));
-    return result.members.map(ConversationMemberResponseDto.fromDomain);
+    const avatars = await this.lookupMemberAvatars(result.members);
+    return result.members.map((member) =>
+      ConversationMemberResponseDto.fromDomain(member, avatars),
+    );
   }
 
   @Post(':conversationId/members')
@@ -414,7 +428,10 @@ export class ConversationController {
         user.id,
       ),
     );
-    return members.map(ConversationMemberResponseDto.fromDomain);
+    const avatars = await this.lookupMemberAvatars(members);
+    return members.map((member) =>
+      ConversationMemberResponseDto.fromDomain(member, avatars),
+    );
   }
 
   @Post()
@@ -453,6 +470,22 @@ export class ConversationController {
       ConversationCreateCommand,
       ConversationCreateResult
     >(ConversationCreateRequestDto.toCommand(request, user.id));
-    return ConversationCreateResponseDto.fromResult(result, user.id);
+    return ConversationCreateResponseDto.fromResult(
+      result,
+      user.id,
+      await this.lookupMemberAvatars(result.members),
+    );
+  }
+
+  private lookupAvatars(userIds: (Uuid | null)[]): Promise<UserAvatarUrls> {
+    return this.queryBus.execute<UserAvatarLookupQuery, UserAvatarUrls>(
+      new UserAvatarLookupQuery(userIds),
+    );
+  }
+
+  private lookupMemberAvatars(
+    members: ConversationMemberEntity[],
+  ): Promise<UserAvatarUrls> {
+    return this.lookupAvatars(members.map((member) => member.userId));
   }
 }

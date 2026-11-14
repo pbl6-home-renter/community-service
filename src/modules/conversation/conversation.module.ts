@@ -14,6 +14,7 @@ import { ConversationMemberDepartureCommandHandler } from './application/command
 import { ConversationMemberRoleUpdateCommandHandler } from './application/commands/conversation-member-role-update/conversation-member-role-update.command.handler';
 import { ConversationListQueryHandler } from './application/queries/conversation-list/conversation-list.query.handler';
 import { ConversationGetDetailQueryHandler } from './application/queries/conversation-get-detail/conversation-get-detail.query.handler';
+import { UserAvatarLookupQueryHandler } from './application/queries/user-avatar-lookup/user-avatar-lookup.query.handler';
 import { ConversationUnreadSummaryQueryHandler } from './application/queries/conversation-unread-summary/conversation-unread-summary.query.handler';
 import { TypeOrmConversationUnreadSummaryQuery } from './infrastructure/queries/typeorm-conversation-unread-summary.query';
 import { IdentityConversationUserLookupService } from './infrastructure/services/identity-conversation-user-lookup.service';
@@ -59,6 +60,7 @@ const commandHandlers = [
 const queryHandlers = [
   ConversationListQueryHandler,
   ConversationGetDetailQueryHandler,
+  UserAvatarLookupQueryHandler,
   ConversationUnreadSummaryQueryHandler,
   ConversationMediaOwnershipLookupQueryHandler,
   MessageListQueryHandler,

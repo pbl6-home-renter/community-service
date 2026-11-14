@@ -57,6 +57,7 @@ describe('ConversationCreateCommandHandler', () => {
         }
         return found;
       }),
+      findAvatarUrls: jest.fn(async () => new Map()),
     };
     const realtime: ChatRealtimePort = {
       membershipActivated: jest.fn((userId) =>
@@ -115,6 +116,7 @@ describe('ConversationCreateCommandHandler', () => {
     const callerId = generateUuid();
     const userLookup: ConversationUserLookup = {
       findDisplayNames: jest.fn(),
+      findAvatarUrls: jest.fn(async () => new Map()),
     };
     const unitOfWork: IUnitOfWork = { run: jest.fn() };
     const handler = new ConversationCreateCommandHandler(

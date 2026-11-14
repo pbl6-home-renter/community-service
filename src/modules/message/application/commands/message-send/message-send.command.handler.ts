@@ -1,3 +1,4 @@
+import { ConversationUserLookup } from 'modules/conversation/application/ports/conversation-user-lookup.port';
 import { Inject } from '@nestjs/common';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { CONVERSATION_MEMBER_DI_TOKEN } from 'modules/conversation-member/conversation-member.di-token';
@@ -55,6 +56,8 @@ export class MessageSendCommandHandler implements ICommandHandler<
     @Inject(CONVERSATION_DI_TOKEN.CHAT_REALTIME)
     private readonly realtime: ChatRealtimePort,
     private readonly chatMessagePushNotifier: ChatMessagePushNotifier,
+    @Inject(CONVERSATION_DI_TOKEN.USER_LOOKUP)
+    private readonly users: ConversationUserLookup,
   ) {}
 
   async execute(command: MessageSendCommand): Promise<MessageSendResult> {
@@ -159,6 +162,28 @@ export class MessageSendCommandHandler implements ICommandHandler<
       command.senderUserId,
       result.replyTo,
     );
+    await this.notifyRecipients(command, createdMessage, result);
+    void this.chatMessagePushNotifier.notify(
+      createdMessage,
+      command.senderUserId,
+    );
+    return { message: result.message, replyTo: result.replyTo };
+  }
+
+  /** Socket `message.received` per recipient; waits for the sender's avatar (best effort). */
+  private async notifyRecipients(
+    command: MessageSendCommand,
+    createdMessage: MessageEntity,
+    result: {
+      conversation: ConversationEntity;
+      activeMembers: ConversationMemberEntity[];
+    },
+  ): Promise<void> {
+    const senderAvatarUrl = command.senderUserId
+      ? ((await this.users.findAvatarUrls([command.senderUserId])).get(
+          command.senderUserId.toLowerCase(),
+        ) ?? null)
+      : null;
     for (const member of result.activeMembers) {
       const recipientUserId = member.userId;
       if (!recipientUserId) continue;
@@ -173,6 +198,7 @@ export class MessageSendCommandHandler implements ICommandHandler<
         sequence: createdMessage.sequence,
         senderUserId: command.senderUserId,
         senderName: createdMessage.senderNameSnapshot,
+        senderAvatarUrl,
         conversationName:
           result.conversation.kind === ConversationKind.DIRECT
             ? (otherMember?.displayName ?? null)
@@ -182,11 +208,6 @@ export class MessageSendCommandHandler implements ICommandHandler<
         createdAt: createdMessage.createdAt,
       });
     }
-    void this.chatMessagePushNotifier.notify(
-      createdMessage,
-      command.senderUserId,
-    );
-    return { message: result.message, replyTo: result.replyTo };
   }
 
   /** Resolves the quote of a stored message from the original's current state. */

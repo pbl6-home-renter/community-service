@@ -128,6 +128,13 @@ function createHandler(input: {
     unitOfWork,
     realtime,
     pushNotifier,
+    {
+      findDisplayNames: jest.fn(async () => new Map()),
+      findAvatarUrls: jest.fn(
+        async (ids: readonly string[]) =>
+          new Map(ids.map((id) => [id.toLowerCase(), `avatar:${id}`])),
+      ),
+    },
   );
 
   return { handler, conversations, members, messages, realtime, order };
@@ -176,6 +183,7 @@ describe('MessageSendCommandHandler', () => {
       expect.objectContaining({
         conversationName: 'Lease discussion',
         contentPreview: 'Hello',
+        senderAvatarUrl: `avatar:${sender.userId}`,
       }),
     );
     expect(order[0]).toBe('committed');

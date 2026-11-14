@@ -1,3 +1,5 @@
+import { UserAvatarLookupQuery } from 'modules/conversation/application/queries/user-avatar-lookup/user-avatar-lookup.query';
+import { UserAvatarUrls } from 'modules/conversation/application/queries/user-avatar-lookup/user-avatar-lookup.query.handler';
 import {
   Body,
   Controller,
@@ -123,9 +125,19 @@ export class MessageController {
       MessageListQuery,
       CursorPaginatedResult<MessageReadModel>
     >(MessageListRequestDto.toQuery(request, user.id));
+    const avatars = await this.queryBus.execute<
+      UserAvatarLookupQuery,
+      UserAvatarUrls
+    >(
+      new UserAvatarLookupQuery(
+        result.data.map((message) => message.senderUserId),
+      ),
+    );
     return CursorPaginatedResponseDto.create({
       ...result,
-      data: result.data.map(MessageListResponseDto.fromReadModel),
+      data: result.data.map((message) =>
+        MessageListResponseDto.fromReadModel(message, avatars),
+      ),
     });
   }
 

@@ -1,3 +1,4 @@
+import { UserAvatarUrls } from 'modules/conversation/application/queries/user-avatar-lookup/user-avatar-lookup.query.handler';
 import { ApiProperty } from '@nestjs/swagger';
 import { Uuid } from 'shared/domain/value-objects/uuid.vo';
 import { ConversationCreateResult } from 'modules/conversation/application/commands/conversation-create/conversation-create.result';
@@ -22,6 +23,7 @@ export class ConversationCreateResponseDto {
   static fromResult(
     result: ConversationCreateResult,
     viewerUserId: Uuid,
+    avatars?: UserAvatarUrls,
   ): ConversationCreateResponseDto {
     const response = new ConversationCreateResponseDto();
     response.code = result.wasCreated
@@ -30,6 +32,7 @@ export class ConversationCreateResponseDto {
     response.data = ConversationDetailResponseDto.fromResult(
       result,
       viewerUserId,
+      avatars,
     );
     return response;
   }

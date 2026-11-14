@@ -186,6 +186,7 @@ function setup() {
           ]),
         ),
     ),
+    findAvatarUrls: jest.fn(async () => new Map()),
   } as ConversationUserLookup;
   const handler = new ContractContextApplyCommandHandler(
     conversations,
