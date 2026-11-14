@@ -21,6 +21,7 @@ async function bootstrap() {
   });
 
   app.enableShutdownHooks();
+  app.set('query parser', 'extended');
 
   const configService = app.select(SharedModule).get(ApiConfigService);
 
