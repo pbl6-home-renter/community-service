@@ -17,7 +17,7 @@ export class NotificationDeliveryService implements NotificationDeliveryPort {
     private readonly realtime: NotificationRealtimePort,
     @Inject(PUSH_DEVICE_DI_TOKEN.DELIVERY)
     private readonly pushDelivery: PushDeliveryPort,
-  ) {}
+  ) { }
 
   async deliver(notifications: NotificationEntity[]): Promise<void> {
     if (notifications.length === 0) return;
