@@ -11,6 +11,7 @@ import { NOTIFICATION_DI_TOKEN } from './notification.di-token';
 import { NotificationController } from './presentation/http/controllers/notification.controller';
 import { InboxModule } from 'modules/inbox/inbox.module';
 import { NotificationRequestedSubscriber } from './presentation/messaging/notification-requested.subscriber';
+import { MatchRequestSubscriber } from './presentation/messaging/match-request.subscriber';
 import { RealtimeModule } from 'modules/realtime/realtime.module';
 import { PushDeviceModule } from 'modules/push-device/push-device.module';
 import { NotificationDeliveryService } from './application/services/notification-delivery.service';
@@ -38,6 +39,7 @@ const queryHandlers = [NotificationListQueryHandler];
     ...commandHandlers,
     ...queryHandlers,
     NotificationRequestedSubscriber,
+    MatchRequestSubscriber,
     NotificationDeliveryService,
     NotificationSocketPublisher,
     IssueNotificationRecipientsService,
