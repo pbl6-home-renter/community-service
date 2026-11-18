@@ -16,6 +16,8 @@ import { ISSUE_MEDIA_PORT, IssueMediaPort } from '../../ports/issue-media.port';
 import { IssueAccessService } from '../../services/issue-access.service';
 import { IssueReportGetByIdQuery } from './issue-report-get-by-id.query';
 
+const MAX_ISSUE_MEDIA_FILES = 5;
+
 export interface IssueReportDetailResult {
   issue: IssueReportEntity;
   context: IssueContext;
@@ -49,13 +51,14 @@ export class IssueReportGetByIdQueryHandler implements IQueryHandler<IssueReport
     const active =
       issue.status === IssueStatus.OPEN ||
       issue.status === IssueStatus.IN_PROGRESS;
+    const photoIds = await this.media.completedPhotoIds(issue.id);
     return {
       issue,
       context,
-      photoIds: await this.media.completedPhotoIds(issue.id),
+      photoIds,
       canUpdate: active && IssueAccessService.canManage(query.actor, context),
       canCancel: active && issue.creatorId === query.actor.id,
-      canUploadPhotos: true,
+      canUploadPhotos: active && photoIds.length < MAX_ISSUE_MEDIA_FILES,
     };
   }
 }
