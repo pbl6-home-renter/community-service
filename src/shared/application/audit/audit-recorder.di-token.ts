@@ -1,0 +1,1 @@
+export const AUDIT_RECORDER_DI_TOKEN = Symbol('AUDIT_RECORDER');
