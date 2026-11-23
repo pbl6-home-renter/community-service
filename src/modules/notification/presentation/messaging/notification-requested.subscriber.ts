@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 import { UNIT_OF_WORK_DI_TOKEN } from 'shared/application/di-tokens';
 import { IUnitOfWork } from 'shared/application/ports/unit-of-work.port';
@@ -24,6 +24,8 @@ import { Uuid } from 'shared/domain/value-objects/uuid.vo';
 
 @Injectable()
 export class NotificationRequestedSubscriber {
+  private readonly logger = new Logger(NotificationRequestedSubscriber.name);
+
   constructor(
     @Inject(INBOX_DI_TOKEN.REPOSITORY)
     private readonly inbox: InboxRepository,
@@ -45,6 +47,7 @@ export class NotificationRequestedSubscriber {
   })
   async handle(event: IntegrationEvent): Promise<void> {
     NotificationRequestedEventValidator.assert(event);
+    this.warnIfMissingMessageKey(event);
     const recipients = await this.issueRecipients.resolve(event.payload);
     await this.persistAndDeliver(event, recipients);
   }
@@ -61,6 +64,21 @@ export class NotificationRequestedSubscriber {
     // Best-effort and off the ack path: the inbox row is the source of truth,
     // so a lost push only means the user sees it next time they open the list.
     void this.delivery.deliver(notifications);
+  }
+
+  /**
+   * Convention (docs/notifications.md): every notification carries `data.messageKey`
+   * so clients can translate it and history stays renderable. Not enforced yet so
+   * producers that predate the convention keep working.
+   */
+  private warnIfMissingMessageKey(
+    event: NotificationRequestedIntegrationEvent,
+  ): void {
+    const messageKey = event.payload.notification.data?.messageKey;
+    if (typeof messageKey === 'string' && messageKey.trim()) return;
+    this.logger.warn(
+      `Notification event ${event.id} from ${event.payload.sourceService} has no data.messageKey; clients will show the raw title/body`,
+    );
   }
 
   private handleOnce(
