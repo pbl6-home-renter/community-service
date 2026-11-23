@@ -24,8 +24,8 @@ const buildEvent = (data: Record<string, unknown> | null) => ({
     recipientUserIds: [generateUuid()],
     notification: {
       type: 'system',
-      title: 'Tòa nhà đã được duyệt',
-      body: 'Tòa Sunrise đã được admin duyệt.',
+      title: 'BUILDING_APPROVED_TITLE',
+      body: 'BUILDING_APPROVED_BODY',
       data,
     },
   },
