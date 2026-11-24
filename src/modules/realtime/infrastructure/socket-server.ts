@@ -13,6 +13,7 @@ import { UserStatus } from 'shared/domain/enums/user-status.enum';
 import { SOCKET_PATH, SOCKET_SESSION_EVENTS } from './socket.constants';
 
 export const userRoom = (id: Uuid): string => `user:${id}`;
+export const notificationUserRoom = (id: Uuid): string => `notification:${id}`;
 
 type ConnectionHandler = (client: Socket) => void;
 
@@ -77,7 +78,7 @@ export class SocketServer implements OnModuleInit, OnModuleDestroy {
     }
     try {
       const user = await this.tokens.verify(token);
-      if (user.status !== UserStatus.ACTIVE) {
+      if (user.status !== UserStatus.ACTIVE && user.status !== UserStatus.LOCKED) {
         client.disconnect(true);
         return;
       }
@@ -86,8 +87,11 @@ export class SocketServer implements OnModuleInit, OnModuleDestroy {
         client.disconnect(true);
         return;
       }
-      client.data.userId = user.id;
-      await client.join(userRoom(user.id));
+      await client.join(notificationUserRoom(user.id));
+      if (user.status === UserStatus.ACTIVE) {
+        client.data.userId = user.id;
+        await client.join(userRoom(user.id));
+      }
       const timeout = setTimeout(
         () => client.disconnect(true),
         Math.min(expiresAt * 1000 - Date.now(), 2147483647),

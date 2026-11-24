@@ -18,6 +18,7 @@ import {
 import { AuthenticatedUser } from 'shared/application/auth/authenticated-user';
 import { ApiSuccessResponse } from 'shared/presentation/decorators/api-success-response.decorator';
 import { CurrentUser } from 'shared/presentation/decorators/auth/current-user.decorator';
+import { AllowLocked } from 'shared/presentation/decorators/auth/access-control.decorators';
 import { ResponseCode } from 'shared/presentation/decorators/response-code.decorator';
 import { NotificationPreferenceResponseCodeConstant } from '../constants/notification-preference-response-code.constant';
 import { NotificationPreferenceUpdateCommand } from '../../../application/commands/notification-preference-update.command';
@@ -39,6 +40,7 @@ export class NotificationPreferenceController {
   ) {}
 
   @Get()
+  @AllowLocked()
   @ResponseCode(
     NotificationPreferenceResponseCodeConstant.NOTIFICATION_PREFERENCES_FETCHED,
   )
