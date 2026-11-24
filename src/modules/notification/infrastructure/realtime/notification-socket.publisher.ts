@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Uuid } from 'shared/domain/value-objects/uuid.vo';
 import {
   SocketServer,
-  userRoom,
+  notificationUserRoom,
 } from 'modules/realtime/infrastructure/socket-server';
 import { NOTIFICATION_SOCKET_EVENTS } from './notification-socket.constants';
 import {
@@ -16,7 +16,7 @@ export class NotificationSocketPublisher implements NotificationRealtimePort {
 
   notificationCreated(userId: Uuid, notification: RealtimeNotification): void {
     this.socket.emit(
-      userRoom(userId),
+      notificationUserRoom(userId),
       NOTIFICATION_SOCKET_EVENTS.CREATED,
       notification,
     );
@@ -28,7 +28,7 @@ export class NotificationSocketPublisher implements NotificationRealtimePort {
     readAt: Date,
   ): void {
     this.socket.emit(
-      userRoom(userId),
+      notificationUserRoom(userId),
       NOTIFICATION_SOCKET_EVENTS.READ_STATE_UPDATED,
       { notificationId, readAt, all: notificationId === null },
     );

@@ -72,6 +72,8 @@ Routing key và `eventType` đều là `notification.requested`. Validator:
 
 ## 4. Hiển thị phía client
 
+Locked recipients may read and mark their own notifications and read their notification preferences. Connections with a `status=locked` token join only the notification Socket room, not the regular user or conversation rooms. Tokens issued before the lock can retain `status=active` for up to 15 minutes. Other business actions, including updating notification preferences, remain blocked for locked-status tokens (P12-D99).
+
 - **fe**: registry `src/features/notifications/utils/notification-registry.ts` ánh xạ
   `messageKey → { i18n title/body, tham số, route theo vai trò }`. `messageKey` chưa có trong
   registry thì hiển thị `title`/`body` như server gửi.
@@ -85,7 +87,7 @@ Routing key và `eventType` đều là `notification.requested`. Validator:
 | `issue.created` / `issue.updated` / `issue.cancelled` | community-service | `issue` | Landlord + thành viên hợp đồng (trừ người thao tác) | `issueId`, `contractId` | Đã có |
 | `match_request.created` / `.accepted` / `.rejected` / `.withdrawn` | tenancy-service (community dựng nội dung) | `system` | Bên còn lại | `matchRequestId`, `actorUserId`, `actorDisplayName`, `status` | Đã có |
 | `invoice.issued` | tenancy-service | `invoice` | Tenant của hợp đồng | `invoiceId`, `contractId`, `period` | Có gửi, thiếu `messageKey` (P12-03) |
-| `user.locked` / `user.unlocked` | identity | `system` | Người bị khóa / mở khóa | `userId`, `status`, `lockedAt` | Có gửi, thiếu `messageKey` nên Web hiện mã (P12-02) |
+| `user.locked` / `user.unlocked` | identity | `system` | Người bị khóa / mở khóa | `userId`, `status`, `eventType`, `lockedAt` | Đã có (P12-02) |
 | `contract.suspended`, `contract.lock_decision_required`, `contract.restored`, `contract.terminated_by_lock` | tenancy-service | `system` | Theo luồng khóa landlord | `contractId`, … | Có gửi, thiếu `messageKey` nên Web hiện mã (P12-03) |
 | `building.approved` / `building.rejected` | tenancy-service | `system` | Landlord của tòa | `buildingId`, `buildingName`, `note` | Kế hoạch (P12-04) |
 | `building.pending_review` | tenancy-service | `system` | Admin | `buildingId`, `buildingName`, `landlordName` | Kế hoạch (P12-05) |

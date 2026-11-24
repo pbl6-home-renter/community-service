@@ -22,6 +22,7 @@ import { CursorPaginatedResult } from 'shared/application/pagination/cursor-pagi
 import { Uuid } from 'shared/domain/value-objects/uuid.vo';
 import { ApiSuccessResponse } from 'shared/presentation/decorators/api-success-response.decorator';
 import { CurrentUser } from 'shared/presentation/decorators/auth/current-user.decorator';
+import { AllowLocked } from 'shared/presentation/decorators/auth/access-control.decorators';
 import { ResponseCode } from 'shared/presentation/decorators/response-code.decorator';
 import { NotificationResponseCodeConstant } from '../constants/notification-response-code.constant';
 import { CursorPaginatedResponseDto } from 'shared/presentation/pagination/cursor-paginated.response.dto';
@@ -36,6 +37,7 @@ import { NotificationMarkAllReadResponseDto } from '../responses/notification-ma
 
 @ApiTags('Notification')
 @ApiBearerAuth()
+@AllowLocked()
 @Controller('notifications')
 export class NotificationController {
   constructor(
