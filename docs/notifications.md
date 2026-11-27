@@ -90,7 +90,7 @@ Locked recipients may read and mark their own notifications and read their notif
 | `user.locked` / `user.unlocked` | identity | `system` | Người bị khóa / mở khóa | `userId`, `status`, `eventType`, `lockedAt` | Đã có (P12-02) |
 | `contract.suspended`, `contract.lock_decision_required`, `contract.restored`, `contract.terminated_by_lock` | tenancy-service | `system` | Theo luồng khóa landlord | `contractId`, … | Có gửi, thiếu `messageKey` nên Web hiện mã (P12-03) |
 | `building.approved` / `building.rejected` | tenancy-service | `system` | Landlord của tòa | `buildingId`, `buildingName`, `note` | Kế hoạch (P12-04) |
-| `building.pending_review` | tenancy-service | `system` | Admin | `buildingId`, `buildingName`, `landlordName` | Kế hoạch (P12-05) |
+| `building.pending_review` | tenancy-service | `system` | Admin | `buildingId`, `buildingName`, `landlordName` | Đã có (P12-05) |
 | `invoice.voided` | tenancy-service | `invoice` | Tenant của hợp đồng | `invoiceId`, `period`, `reason` | Kế hoạch (P12-06) |
 | `contract.activated`, `contract.checked_out` | tenancy-service | `system` | Tenant và thành viên hợp đồng | `contractId`, `contractCode`, `roomName`, `buildingName`, … | Kế hoạch (P12-07) |
 | `contract.member_added`, `contract.member_linked`, `contract.member_left` | tenancy-service | `system` | Theo từng sự kiện | `contractId`, `contractCode`, `memberName`, … | Kế hoạch (P12-08) |
